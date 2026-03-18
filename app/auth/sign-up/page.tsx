@@ -3,7 +3,7 @@ import { ListTodo } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function SignIn() {
+export default function SignUp() {
   return (
     <div className="min-h-screen bg-white">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -43,10 +43,10 @@ export default function SignIn() {
             </div>
 
             <h2 className="mt-10 text-3xl font-bold tracking-tight text-slate-900">
-              Welcome back
+              Create an account
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Sign in to your account to continue
+              Sign up to get started with KanbanFlow
             </p>
 
             <form className="mt-8 space-y-6">
@@ -76,31 +76,16 @@ export default function SignIn() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  Remember me
-                </label>
-
-                <Link
-                  href="#"
-                  className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
+              <Link href="/dashboard">
               <Button className="w-full rounded-xl py-3 text-base font-semibold">
-                Sign in
+                Create Account
               </Button>
+              </Link>
 
               <p className="text-center text-sm text-slate-500">
-                Don&apos;t have an account?{' '}
-                <Link href="/sign-up" className="font-medium text-indigo-600 hover:text-indigo-700">
-                  Sign up
+                Already have an account?{''}
+                <Link href="/auth/sign-in" className="font-medium text-indigo-600 hover:text-indigo-700">
+                  Sign In
                 </Link>
               </p>
 

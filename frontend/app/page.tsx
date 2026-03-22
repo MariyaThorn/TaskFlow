@@ -17,12 +17,12 @@ export default function Home() {
               Collaborate, manage projects, and reach peak productivity. From brainstorming to planning to execution, KanbanFlow helps your team work better together.
             </p>
             <div className="flex items-center gap-4 justify-center">
-              <Link href="/sign-up">
+              <Link href="auth/sign-up">
                 <Button size="lg" className="h-12 px-8 text-lg font-medium">
                   Get Started - It's Free <ArrowRight className="ml-2" />
                 </Button>
               </Link>
-              <Link href="/sign-in">
+              <Link href="auth/sign-in">
                 <Button variant="outline" size="lg" className="h-12 px-8 text-lg font-medium">
                   Log In
                 </Button>

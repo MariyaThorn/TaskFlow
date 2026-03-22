@@ -11,14 +11,14 @@ export default function Navbar() {
                 TaskFlow
                 </Link>
                <div className="flex items-center gap-4">
-                 <Link href="/sign-in">
+                 <Link href="/auth/sign-in">
                 <Button
                   variant="ghost"
                   className="text-gray-700 hover:text-black">
                   Log In
                 </Button>
               </Link>
-              <Link href="/sign-up">
+              <Link href="/auth/sign-up">
                 <Button className="bg-primary hover:bg-primary/90">
                   Start for free
                 </Button>

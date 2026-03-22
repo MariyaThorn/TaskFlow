@@ -92,14 +92,15 @@ export default function SignIn() {
                   Forgot password?
                 </Link>
               </div>
-
+              <Link href="/dashboard/dashboard-1">
               <Button className="w-full rounded-xl py-3 text-base font-semibold">
                 Sign in
               </Button>
+              </Link>
 
               <p className="text-center text-sm text-slate-500">
                 Don&apos;t have an account?{' '}
-                <Link href="/sign-up" className="font-medium text-indigo-600 hover:text-indigo-700">
+                <Link href="/auth/sign-up" className="font-medium text-indigo-600 hover:text-indigo-700">
                   Sign up
                 </Link>
               </p>

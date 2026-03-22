@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Clock } from "lucide-react";
 import Navbar from "@/components/searchbar";
 import Sidebar from "@/components/sidebar";
-
+import { useRouter } from "next/navigation";
 type Project = {
   id: number;
   name: string;
@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectTeam, setNewProjectTeam] = useState("");
+  const router = useRouter();
 
   const filteredProjects = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -93,6 +94,7 @@ export default function DashboardPage() {
             {filteredProjects.map((project) => (
               <button
                 key={project.id}
+                onClick={() => router.push(`/dashboard/project/${project.id}`)}
                 className="group flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="h-32 w-full bg-slate-200/80" />

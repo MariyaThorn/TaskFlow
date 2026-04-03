@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LayoutGrid, Users, Settings, LogOut, ListTodo } from "lucide-react";
 
 type NavItem = {
   label: string;
   icon: React.ReactNode;
-  href?: string;
-  active?: boolean;
-  onClick?: () => void;
+  href: string;
 };
 
 type SidebarProps = {
@@ -16,11 +15,23 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ activeItem = "Projects" }: SidebarProps) {
+  const pathname = usePathname();
+
   const navItems: NavItem[] = [
-    { label: "Projects", icon: <LayoutGrid className="h-4 w-4" /> },
-    { label: "Teams",    icon: <Users className="h-4 w-4" /> },
-    { label: "Settings", icon: <Settings className="h-4 w-4" /> },
+    { label: "Projects", icon: <LayoutGrid className="h-4 w-4" />, href: "/dashboard" },
+    { label: "Teams", icon: <Users className="h-4 w-4" />, href: "/dashboard/teams" },
+    { label: "Settings", icon: <Settings className="h-4 w-4" />, href: "/dashboard/settings" },
   ];
+
+  const isActive = (label: string, href: string) => {
+    if (pathname === href || pathname.startsWith(`${href}/`)) {
+      return true;
+    }
+    if (label === "Projects") {
+      return pathname.startsWith("/dashboard/project") || pathname.startsWith("/dashboard/board");
+    }
+    return label === activeItem;
+  };
 
   return (
     <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
@@ -38,20 +49,21 @@ export default function Sidebar({ activeItem = "Projects" }: SidebarProps) {
 
       {/* Nav items */}
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map(({ label, icon }) => {
-          const isActive = label === activeItem;
+        {navItems.map(({ label, icon, href }) => {
+          const active = isActive(label, href);
           return (
-            <button
+            <Link
               key={label}
+              href={href}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
+                active
                   ? "bg-slate-100 text-slate-900"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               {icon}
               {label}
-            </button>
+            </Link>
           );
         })}
       </nav>

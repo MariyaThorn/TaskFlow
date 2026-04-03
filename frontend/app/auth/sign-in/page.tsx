@@ -6,6 +6,7 @@ import { ListTodo } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { seedMockUsers, validateMockUser } from "@/lib/mock-auth";
 
 interface FormData {
   email: string;
@@ -61,16 +62,9 @@ export default function SignIn() {
       return;
     }
 
-    // Temporary mock — replace with real API call later
-    const mockUser = {
-      email: "test@example.com",
-      password: "password123",
-    };
+    seedMockUsers();
 
-    if (
-      formData.email === mockUser.email &&
-      formData.password === mockUser.password
-    ) {
+    if (validateMockUser(formData.email, formData.password)) {
       router.push("/dashboard/dashboard-1");
     } else {
       setErrors({ general: "Invalid email or password." });

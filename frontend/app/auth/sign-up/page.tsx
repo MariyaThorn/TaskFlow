@@ -1,9 +1,78 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ListTodo } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { registerMockUser, seedMockUsers } from "@/lib/mock-auth";
+
+interface FormData {
+  email: string;
+  password: string;
+}
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+  general?: string;
+}
 
 export default function SignUp() {
+  const router = useRouter();
+  const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    seedMockUsers();
+  }, []);
+
+  const validate = (): FormErrors => {
+    const next: FormErrors = {};
+    if (!formData.email.trim()) {
+      next.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      next.email = "Please enter a valid email address.";
+    }
+
+    if (!formData.password) {
+      next.password = "Password is required.";
+    } else if (formData.password.length < 8) {
+      next.password = "Password must be at least 8 characters.";
+    }
+    return next;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const validation = validate();
+    if (Object.keys(validation).length > 0) {
+      setErrors(validation);
+      return;
+    }
+
+    const result = registerMockUser({
+      email: formData.email.trim(),
+      password: formData.password,
+    });
+
+    if (!result.ok) {
+      setErrors({ general: result.message });
+      return;
+    }
+
+    router.push("/dashboard/dashboard-1");
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -49,7 +118,7 @@ export default function SignUp() {
               Sign up to get started with KanbanFlow
             </p>
 
-            <form className="mt-8 space-y-6">
+            <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
@@ -57,10 +126,19 @@ export default function SignUp() {
                   </label>
                   <input
                     type="email"
-                    required
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
                     placeholder="you@example.com"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className={`mt-2 w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      errors.email
+                        ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-300"
+                    }`}
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -69,32 +147,45 @@ export default function SignUp() {
                   </label>
                   <input
                     type="password"
-                    required
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
                     placeholder="••••••••"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className={`mt-2 w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 ${
+                      errors.password
+                        ? "border-red-400 focus:border-red-400 focus:ring-red-200"
+                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-300"
+                    }`}
                   />
+                  {errors.password && (
+                    <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+                  )}
                 </div>
               </div>
 
-              <Link href="/dashboard/dashboard-1">
-              <Button className="w-full rounded-xl py-3 text-base font-semibold">
+              {errors.general && (
+                <p className="rounded-lg bg-red-50 py-2 text-center text-sm text-red-500">
+                  {errors.general}
+                </p>
+              )}
+
+              <Button type="submit" className="w-full rounded-xl py-3 text-base font-semibold">
                 Create Account
               </Button>
-              </Link>
 
               <p className="text-center text-sm text-slate-500">
-                Already have an account?{''}
+                Already have an account?{" "}
                 <Link href="/auth/sign-in" className="font-medium text-indigo-600 hover:text-indigo-700">
                   Sign In
                 </Link>
               </p>
 
               <p className="text-center text-xs text-slate-400">
-                By continuing, you agree to our{' '}
+                By continuing, you agree to our{" "}
                 <Link href="#" className="font-medium text-slate-600 hover:text-slate-800">
                   Terms of Service
-                </Link>{' '}
-                and{' '}
+                </Link>{" "}
+                and{" "}
                 <Link href="#" className="font-medium text-slate-600 hover:text-slate-800">
                   Privacy Policy
                 </Link>

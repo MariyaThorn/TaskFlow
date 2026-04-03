@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, ListTodo, Users, CircleCheck, LayoutGrid } from "lucide-react";
+import { ArrowRight, Zap, ListTodo, Users, CircleCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -19,7 +19,7 @@ export default function Home() {
             <div className="flex items-center gap-4 justify-center">
               <Link href="auth/sign-up">
                 <Button size="lg" className="h-12 px-8 text-lg font-medium">
-                  Get Started - It's Free <ArrowRight className="ml-2" />
+                  Get Started - It&apos;s Free <ArrowRight className="ml-2" />
                 </Button>
               </Link>
               <Link href="auth/sign-in">
@@ -103,7 +103,7 @@ export default function Home() {
                       </span>
                       <div>
                         <p className="text-lg font-semibold text-black">Customizable workflows</p>
-                        <p className="text-sm text-muted-foreground">Adapt boards to match your team's unique process</p>
+                        <p className="text-sm text-muted-foreground">Adapt boards to match your team&apos;s unique process</p>
                       </div>
                     </li>
                     <li className="flex items-start gap-4">

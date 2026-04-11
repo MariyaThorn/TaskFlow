@@ -24,43 +24,9 @@ interface TeamProject {
   color: string;
 }
 
-const initialMembers: TeamMember[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "admin",
-    avatar: "JD",
-    status: "active",
-    color: "from-blue-500 to-blue-600",
-  },
-  {
-    id: "2",
-    name: "Sarah Smith",
-    email: "sarah.smith@example.com",
-    role: "member",
-    avatar: "SS",
-    status: "active",
-    color: "from-purple-500 to-purple-600",
-  },
-];
+const initialMembers: TeamMember[] = [];
 
-const teamProjects: TeamProject[] = [
-  {
-    id: "1",
-    name: "Product Development",
-    boardCount: 5,
-    lastUpdated: "2 hours ago",
-    color: "from-blue-500 to-blue-600",
-  },
-  {
-    id: "2",
-    name: "Design System",
-    boardCount: 4,
-    lastUpdated: "1 day ago",
-    color: "from-purple-500 to-purple-600",
-  },
-];
+const teamProjects: TeamProject[] = [];
 
 export default function TeamDetailPage() {
   const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
@@ -69,7 +35,7 @@ export default function TeamDetailPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const teamName = "Engineering Team";
+  const teamName = "";
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +72,7 @@ export default function TeamDetailPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar activeItem="Teams" />
       <div className="flex flex-1 flex-col">
-        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={2} />
+        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={0} />
 
         <main className="flex-1 overflow-y-auto p-8">
           <Link href="/dashboard/teams" className="mb-6 inline-flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900">

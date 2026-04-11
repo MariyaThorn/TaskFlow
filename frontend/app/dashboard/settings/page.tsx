@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Moon, Sun, Bell, Shield, User, Globe } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import Navbar from "@/components/searchbar";
+import { getUser, fetchMe } from "@/lib/auth";
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
@@ -26,10 +27,32 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState("en");
   const [timezone, setTimezone] = useState("UTC");
   const [profileVisibility, setProfileVisibility] = useState("team");
-  const [name, setName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
-  const [bio, setBio] = useState("Product Manager passionate about building great tools");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [occupation, setOccupation] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const cached = getUser();
+    if (cached) {
+      setFirstName(cached.firstName || "");
+      setLastName(cached.lastName || "");
+      setEmail(cached.email || "");
+      setUsername(cached.username || "");
+      setOccupation(cached.occupation || "");
+    }
+    fetchMe()
+      .then((user) => {
+        setFirstName(user.firstName || "");
+        setLastName(user.lastName || "");
+        setEmail(user.email || "");
+        setUsername(user.username || "");
+        setOccupation(user.occupation || "");
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSaveProfile = () => {
     window.alert("Profile settings saved!");
@@ -39,7 +62,7 @@ export default function SettingsPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar activeItem="Settings" />
       <div className="flex flex-1 flex-col">
-        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={2} />
+        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={0} />
 
         <main className="flex-1 overflow-y-auto p-8">
           <div className="mb-8">
@@ -62,17 +85,27 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-4 p-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">First Name</label>
+                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Last Name</label>
+                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                  </div>
+                </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Full Name</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Username</label>
+                  <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Email Address</label>
                   <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Bio</label>
-                  <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Occupation</label>
+                  <input value={occupation} onChange={(e) => setOccupation(e.target.value)} className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
                 </div>
                 <button onClick={handleSaveProfile} className="rounded-xl bg-[#4F46E5] px-6 py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA]">
                   Save Changes

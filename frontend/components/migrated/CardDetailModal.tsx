@@ -1,23 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { X, AlignLeft, Tag, Paperclip, MessageSquare, Trash2 } from "lucide-react";
-import type { Card } from "@/components/migrated/types";
+import { useState, useRef } from "react";
+import { X, AlignLeft, Tag, Paperclip, MessageSquare, Trash2, FileText, Download } from "lucide-react";
+import type { Card, KanbanLabel, KanbanAttachment } from "@/components/migrated/types";
+import { getToken } from "@/lib/auth";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+const LABEL_COLORS = [
+  { name: "Red", value: "bg-red-500" },
+  { name: "Orange", value: "bg-orange-500" },
+  { name: "Yellow", value: "bg-yellow-500" },
+  { name: "Green", value: "bg-green-500" },
+  { name: "Blue", value: "bg-blue-500" },
+  { name: "Purple", value: "bg-purple-500" },
+  { name: "Pink", value: "bg-pink-500" },
+  { name: "Indigo", value: "bg-indigo-500" },
+];
 
 interface CardDetailModalProps {
   card: Card;
+  boardId: string;
   columnTitle: string;
   onClose: () => void;
   onUpdate: (card: Card) => void;
   onDelete: (cardId: string) => void;
 }
 
-export default function CardDetailModal({ card, columnTitle, onClose, onUpdate, onDelete }: CardDetailModalProps) {
+export default function CardDetailModal({ card, boardId, columnTitle, onClose, onUpdate, onDelete }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description);
   const [dueDate, setDueDate] = useState(card.dueDate);
+  const [progress, setProgress] = useState(card.progress ?? 0);
+  const [labels, setLabels] = useState<KanbanLabel[]>(card.labels || []);
+  const [attachments, setAttachments] = useState<KanbanAttachment[]>(
+    Array.isArray(card.attachments) ? card.attachments : []
+  );
   const [newComment, setNewComment] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLabelForm, setShowLabelForm] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0].value);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     onUpdate({
@@ -25,12 +50,123 @@ export default function CardDetailModal({ card, columnTitle, onClose, onUpdate, 
       title,
       description,
       dueDate,
+      progress,
+      labels,
+      attachments,
     });
   };
 
   const handleDelete = () => {
     onDelete(card.id);
     onClose();
+  };
+
+  const handleAddLabel = () => {
+    if (!newLabelName.trim()) return;
+    const newLabel: KanbanLabel = {
+      id: `label-${Date.now()}`,
+      name: newLabelName.trim(),
+      color: newLabelColor,
+    };
+    const updatedLabels = [...labels, newLabel];
+    setLabels(updatedLabels);
+    setNewLabelName("");
+    setShowLabelForm(false);
+    onUpdate({
+      ...card,
+      title,
+      description,
+      dueDate,
+      progress,
+      labels: updatedLabels,
+      attachments,
+    });
+  };
+
+  const handleRemoveLabel = (labelId: string) => {
+    const updatedLabels = labels.filter((l) => l.id !== labelId);
+    setLabels(updatedLabels);
+    onUpdate({
+      ...card,
+      title,
+      description,
+      dueDate,
+      progress,
+      labels: updatedLabels,
+      attachments,
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const token = getToken();
+      const res = await fetch(`${API_URL}/boards/${boardId}/cards/${card.id}/attachments`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const updatedAttachments = [...attachments, data.attachment];
+        setAttachments(updatedAttachments);
+        onUpdate({
+          ...card,
+          title,
+          description,
+          dueDate,
+          progress,
+          labels,
+          attachments: updatedAttachments,
+        });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    try {
+      const token = getToken();
+      await fetch(`${API_URL}/boards/${boardId}/cards/${card.id}/attachments/${attachmentId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      const updatedAttachments = attachments.filter(
+        (a) => a.id !== attachmentId && (a as { _id?: string })._id !== attachmentId
+      );
+      setAttachments(updatedAttachments);
+      onUpdate({
+        ...card,
+        title,
+        description,
+        dueDate,
+        progress,
+        labels,
+        attachments: updatedAttachments,
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -68,14 +204,66 @@ export default function CardDetailModal({ card, columnTitle, onClose, onUpdate, 
                   <h3 className="font-semibold text-gray-900">Labels</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {card.labels.map((label) => (
-                    <span key={label.id} className={`${label.color} rounded-xl px-3 py-1 text-sm font-medium text-white`}>
+                  {labels.map((label) => (
+                    <span
+                      key={label.id}
+                      className={`${label.color} group relative rounded-xl px-3 py-1 text-sm font-medium text-white cursor-pointer`}
+                      onClick={() => handleRemoveLabel(label.id)}
+                      title="Click to remove"
+                    >
                       {label.name}
+                      <span className="ml-1 hidden group-hover:inline">&times;</span>
                     </span>
                   ))}
-                  <button className="rounded-xl bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
-                    + Add label
-                  </button>
+                  {showLabelForm ? (
+                    <div className="flex w-full flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                      <input
+                        type="text"
+                        value={newLabelName}
+                        onChange={(e) => setNewLabelName(e.target.value)}
+                        placeholder="Label name..."
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddLabel();
+                          if (e.key === "Escape") setShowLabelForm(false);
+                        }}
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {LABEL_COLORS.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => setNewLabelColor(c.value)}
+                            className={`h-6 w-6 rounded-full ${c.value} ${newLabelColor === c.value ? "ring-2 ring-offset-1 ring-gray-800" : ""}`}
+                            title={c.name}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAddLabel}
+                          disabled={!newLabelName.trim()}
+                          className="rounded-lg bg-[#4F46E5] px-3 py-1 text-sm font-medium text-white hover:bg-[#4338CA] disabled:opacity-50"
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => { setShowLabelForm(false); setNewLabelName(""); }}
+                          className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowLabelForm(true)}
+                      className="rounded-xl bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                    >
+                      + Add label
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -98,8 +286,47 @@ export default function CardDetailModal({ card, columnTitle, onClose, onUpdate, 
                   <Paperclip className="h-5 w-5 text-gray-600" />
                   <h3 className="font-semibold text-gray-900">Attachments</h3>
                 </div>
-                <button className="w-full rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100">
-                  Click to upload or drag and drop
+                {attachments.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {attachments.map((att) => (
+                      <div key={att.id || (att as { _id?: string })._id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        <FileText className="h-8 w-8 shrink-0 text-gray-400" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-gray-900">{att.originalName}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(att.size)}</p>
+                        </div>
+                        <a
+                          href={`${API_URL.replace('/api', '')}${att.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                          title="Download"
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                        <button
+                          onClick={() => handleDeleteAttachment(att.id || (att as { _id?: string })._id || "")}
+                          className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                >
+                  {uploading ? "Uploading..." : "Click to upload or drag and drop"}
                 </button>
               </div>
 
@@ -109,21 +336,6 @@ export default function CardDetailModal({ card, columnTitle, onClose, onUpdate, 
                   <h3 className="font-semibold text-gray-900">Comments</h3>
                 </div>
                 <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] text-sm font-semibold text-white">
-                      JD
-                    </div>
-                    <div className="flex-1">
-                      <div className="rounded-xl bg-gray-50 p-3">
-                        <div className="mb-1 flex items-center gap-2">
-                          <span className="text-sm font-semibold text-gray-900">John Doe</span>
-                          <span className="text-xs text-gray-500">2 hours ago</span>
-                        </div>
-                        <p className="text-sm text-gray-700">This looks great! Let&apos;s move forward with this approach.</p>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] text-sm font-semibold text-white">
                       ME
@@ -160,13 +372,34 @@ export default function CardDetailModal({ card, columnTitle, onClose, onUpdate, 
 
             <div className="space-y-3">
               <div>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-600">Progress</h4>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={progress}
+                    onChange={(e) => setProgress(Number(e.target.value))}
+                    onMouseUp={handleSave}
+                    onTouchEnd={handleSave}
+                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-[#4F46E5]"
+                  />
+                  <span className="min-w-[3ch] text-right text-sm font-bold text-gray-700">{progress}%</span>
+                </div>
+                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div className="h-full rounded-full bg-[#4F46E5] transition-all duration-200" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+
+              <div>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-600">Due date</h4>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => {
                     setDueDate(e.target.value);
-                    onUpdate({ ...card, title, description, dueDate: e.target.value });
+                    onUpdate({ ...card, title, description, dueDate: e.target.value, progress });
                   }}
                   className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
                 />

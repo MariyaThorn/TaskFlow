@@ -17,34 +17,7 @@ interface Team {
   role: "owner" | "admin" | "member";
 }
 
-const initialTeams: Team[] = [
-  {
-    id: "1",
-    name: "Engineering",
-    description: "Product development and technical teams",
-    memberCount: 12,
-    projectCount: 5,
-    image:
-      "https://images.unsplash.com/photo-1768796370407-6d36619e7d6d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbmdpbmVlcmluZyUyMHRlYW0lMjBjb2xsYWJvcmF0aW9ufGVufDF8fHx8MTc3Mjk2MTg0N3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    role: "owner",
-  },
-  {
-    id: "2",
-    name: "Marketing",
-    description: "Marketing campaigns and brand management",
-    memberCount: 8,
-    projectCount: 3,
-    role: "admin",
-  },
-  {
-    id: "3",
-    name: "Design",
-    description: "UI/UX design and creative services",
-    memberCount: 6,
-    projectCount: 4,
-    role: "member",
-  },
-];
+const initialTeams: Team[] = [];
 
 export default function TeamsListPage() {
   const [teams, setTeams] = useState(initialTeams);
@@ -82,7 +55,7 @@ export default function TeamsListPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar activeItem="Teams" />
       <div className="flex flex-1 flex-col">
-        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={2} />
+        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={0} />
 
         <main className="flex-1 overflow-y-auto p-8">
           <div className="mb-8 flex items-center justify-between">

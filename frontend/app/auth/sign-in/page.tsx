@@ -6,7 +6,7 @@ import { ListTodo } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { seedMockUsers, validateMockUser } from "@/lib/mock-auth";
+import { login } from "@/lib/auth";
 
 interface FormData {
   email: string;
@@ -53,7 +53,9 @@ export default function SignIn() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const validationErrors = validate();
 
@@ -62,12 +64,15 @@ export default function SignIn() {
       return;
     }
 
-    seedMockUsers();
-
-    if (validateMockUser(formData.email, formData.password)) {
+    setLoading(true);
+    try {
+      await login(formData.email, formData.password);
       router.push("/dashboard/dashboard-1");
-    } else {
-      setErrors({ general: "Invalid email or password." });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Invalid email or password.";
+      setErrors({ general: message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,9 +159,10 @@ export default function SignIn() {
 
             <Button
               type="submit"
-              className="w-full rounded-full bg-[#ffd6b3] py-2.5 text-sm font-semibold tracking-wide text-slate-900 transition hover:bg-[#ffcaa0]"
+              disabled={loading}
+              className="w-full rounded-full bg-[#ffd6b3] py-2.5 text-sm font-semibold tracking-wide text-slate-900 transition hover:bg-[#ffcaa0] disabled:opacity-60"
             >
-              SIGN IN
+              {loading ? "SIGNING IN..." : "SIGN IN"}
             </Button>
 
             <div className="flex items-center gap-3 text-xs text-white/70">

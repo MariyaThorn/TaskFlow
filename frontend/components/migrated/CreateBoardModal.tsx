@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Image } from "lucide-react";
 
 interface CreateBoardModalProps {
   onClose: () => void;
@@ -9,6 +9,7 @@ interface CreateBoardModalProps {
     name: string;
     description: string;
     color: string;
+    backgroundImage?: string;
   }) => void;
 }
 
@@ -27,11 +28,18 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedColor, setSelectedColor] = useState(colorOptions[0].gradient);
+  const [backgroundImage, setBackgroundImage] = useState("");
+  const [useImage, setUseImage] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      onCreate({ name, description, color: selectedColor });
+      onCreate({
+        name,
+        description,
+        color: selectedColor,
+        backgroundImage: useImage && backgroundImage.trim() ? backgroundImage.trim() : undefined,
+      });
       onClose();
     }
   };
@@ -46,6 +54,24 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               <X className="h-5 w-5 text-gray-600" />
             </button>
           </div>
+        </div>
+
+        {/* Preview */}
+        <div className="relative mx-6 mt-6 h-28 overflow-hidden rounded-xl">
+          {useImage && backgroundImage.trim() ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={backgroundImage} alt="" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-black/20" />
+            </>
+          ) : (
+            <div className={`h-full w-full bg-gradient-to-br ${selectedColor}`} />
+          )}
+          {name && (
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <p className="text-lg font-semibold text-white drop-shadow-md">{name}</p>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
@@ -69,27 +95,48 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this board about?"
               className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
-              rows={3}
+              rows={2}
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Board Color</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Background</label>
+              <button
+                type="button"
+                onClick={() => setUseImage(!useImage)}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${useImage ? "bg-[#4F46E5] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                <Image className="h-3.5 w-3.5" />
+                Image URL
+              </button>
+            </div>
+
+            {useImage && (
+              <input
+                type="url"
+                value={backgroundImage}
+                onChange={(e) => setBackgroundImage(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="mb-3 w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+              />
+            )}
+
             <div className="grid grid-cols-4 gap-3">
               {colorOptions.map((color) => (
                 <button
                   key={color.id}
                   type="button"
-                  onClick={() => setSelectedColor(color.gradient)}
-                  className={`h-12 w-full rounded-xl bg-gradient-to-br ${color.gradient} transition-all ${
-                    selectedColor === color.gradient ? "ring-4 ring-[#4F46E5] ring-offset-2" : "hover:scale-105"
+                  onClick={() => { setSelectedColor(color.gradient); setUseImage(false); }}
+                  className={`h-10 w-full rounded-xl bg-gradient-to-br ${color.gradient} transition-all ${
+                    selectedColor === color.gradient && !useImage ? "ring-4 ring-[#4F46E5] ring-offset-2" : "hover:scale-105"
                   }`}
                 />
               ))}
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <button type="submit" className="flex-1 rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA]">
               Create Board
             </button>

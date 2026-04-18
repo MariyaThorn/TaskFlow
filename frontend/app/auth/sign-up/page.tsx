@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ListTodo } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { registerMockUser, seedMockUsers } from "@/lib/mock-auth";
+import { register } from "@/lib/auth";
 
 interface FormData {
+  firstName: string;
+  lastName: string;
+  username: string;
   email: string;
   password: string;
+  occupation: string;
 }
 
 interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
   email?: string;
   password?: string;
   general?: string;
@@ -21,15 +28,25 @@ interface FormErrors {
 
 export default function SignUp() {
   const router = useRouter();
-  const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
+  const [formData, setFormData] = useState<FormData>({
+    firstName: "",
+    lastName: "",
+    username: "",
+    email: "",
+    password: "",
+    occupation: "",
+  });
   const [errors, setErrors] = useState<FormErrors>({});
-
-  useEffect(() => {
-    seedMockUsers();
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const validate = (): FormErrors => {
     const next: FormErrors = {};
+    if (!formData.firstName.trim()) {
+      next.firstName = "First name is required.";
+    }
+    if (!formData.lastName.trim()) {
+      next.lastName = "Last name is required.";
+    }
     if (!formData.email.trim()) {
       next.email = "Email is required.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -52,7 +69,7 @@ export default function SignUp() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const validation = validate();
     if (Object.keys(validation).length > 0) {
@@ -60,17 +77,21 @@ export default function SignUp() {
       return;
     }
 
-    const result = registerMockUser({
-      email: formData.email.trim(),
-      password: formData.password,
-    });
-
-    if (!result.ok) {
-      setErrors({ general: result.message });
-      return;
+    setLoading(true);
+    try {
+      await register(formData.email.trim(), formData.password, {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        username: formData.username.trim() || undefined,
+        occupation: formData.occupation.trim() || undefined,
+      });
+      router.push("/dashboard/dashboard-1");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed.";
+      setErrors({ general: message });
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard/dashboard-1");
   };
 
   return (
@@ -98,6 +119,53 @@ export default function SignUp() {
 
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-sm text-white/90">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    placeholder="John"
+                    className={`w-full rounded-full border bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/55 focus:outline-none focus:ring-2 ${
+                      errors.firstName
+                        ? "border-red-300/70 focus:border-red-300 focus:ring-red-200/40"
+                        : "border-white/30 focus:border-[#ffd6b3] focus:ring-[#ffd6b3]/40"
+                    }`}
+                  />
+                  {errors.firstName && <p className="mt-1 text-xs text-red-200">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm text-white/90">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    placeholder="Doe"
+                    className={`w-full rounded-full border bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/55 focus:outline-none focus:ring-2 ${
+                      errors.lastName
+                        ? "border-red-300/70 focus:border-red-300 focus:ring-red-200/40"
+                        : "border-white/30 focus:border-[#ffd6b3] focus:ring-[#ffd6b3]/40"
+                    }`}
+                  />
+                  {errors.lastName && <p className="mt-1 text-xs text-red-200">{errors.lastName}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm text-white/90">Username <span className="text-white/50">(optional)</span></label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="johndoe"
+                  className="w-full rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/55 focus:border-[#ffd6b3] focus:outline-none focus:ring-2 focus:ring-[#ffd6b3]/40"
+                />
+              </div>
+
               <div>
                 <label className="mb-1.5 block text-sm text-white/90">Email</label>
                 <input
@@ -131,6 +199,18 @@ export default function SignUp() {
                 />
                 {errors.password && <p className="mt-1 text-xs text-red-200">{errors.password}</p>}
               </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm text-white/90">Occupation <span className="text-white/50">(optional)</span></label>
+                <input
+                  type="text"
+                  name="occupation"
+                  value={formData.occupation}
+                  onChange={handleChange}
+                  placeholder="e.g. Product Manager"
+                  className="w-full rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/55 focus:border-[#ffd6b3] focus:outline-none focus:ring-2 focus:ring-[#ffd6b3]/40"
+                />
+              </div>
             </div>
 
             {errors.general && (
@@ -141,9 +221,10 @@ export default function SignUp() {
 
             <Button
               type="submit"
-              className="w-full rounded-full bg-[#ffd6b3] py-2.5 text-sm font-semibold tracking-wide text-slate-900 transition hover:bg-[#ffcaa0]"
+              disabled={loading}
+              className="w-full rounded-full bg-[#ffd6b3] py-2.5 text-sm font-semibold tracking-wide text-slate-900 transition hover:bg-[#ffcaa0] disabled:opacity-60"
             >
-              CREATE ACCOUNT
+              {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
             </Button>
 
             <div className="flex items-center gap-3 text-xs text-white/70">

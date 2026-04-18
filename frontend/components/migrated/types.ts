@@ -10,6 +10,15 @@ export interface KanbanAssignee {
   color: string;
 }
 
+export interface KanbanAttachment {
+  id: string;
+  name: string;
+  originalName: string;
+  url: string;
+  size: number;
+  uploadedAt: string;
+}
+
 export interface Card {
   id: string;
   title: string;
@@ -17,8 +26,9 @@ export interface Card {
   dueDate: string;
   labels: KanbanLabel[];
   comments: number;
-  attachments: number;
+  attachments: KanbanAttachment[];
   assignee?: KanbanAssignee;
+  progress: number;
 }
 
 export interface Column {

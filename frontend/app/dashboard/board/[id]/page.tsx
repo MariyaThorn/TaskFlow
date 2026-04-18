@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { useParams } from "next/navigation";
 import Sidebar from "@/components/sidebar";
-import Navbar from "@/components/searchbar";
 import CardDetailModal from "@/components/migrated/CardDetailModal";
+import { useBoardPresence } from "@/lib/socket";
 import { useBoard } from "./useBoard";
 import BoardHeader from "./BoardHeader";
 import KanbanBoard from "./KanbanBoard";
@@ -13,7 +13,6 @@ import KanbanBoard from "./KanbanBoard";
 export default function BoardPage() {
   const params = useParams();
   const boardId = params.id as string;
-  const [searchTerm, setSearchTerm] = useState("");
 
   const {
     boardName,
@@ -34,7 +33,14 @@ export default function BoardPage() {
     handleDeleteColumn,
   } = useBoard(boardId);
 
-  const currentUserId = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}").id : null;
+  // Use the same key as authentication logic (taskflow_user)
+  const currentUserId = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("taskflow_user") || "{}").id : null;
+  const activeUserIds = useBoardPresence(boardId);
+
+  // Debug log for presence troubleshooting
+  if (typeof window !== "undefined") {
+    console.log("[BoardPage] currentUserId:", currentUserId, "activeUserIds:", activeUserIds);
+  }
 
   const onDragEnd = useCallback((result: DropResult) => {
     const { draggableId, source, destination } = result;
@@ -49,14 +55,13 @@ export default function BoardPage() {
         <Sidebar activeItem="Projects" />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={0} />
-
           <BoardHeader
             projectName={projectName}
             boardName={boardName}
             projectId={projectId}
             projectMembers={projectMembers}
             currentUserId={currentUserId}
+            activeUserIds={activeUserIds}
           />
 
           <KanbanBoard

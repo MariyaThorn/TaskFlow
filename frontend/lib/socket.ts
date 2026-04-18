@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3000";
+const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3000"|| "http://26.72.254.233:3000";
 
 let globalSocket: Socket | null = null;
 
@@ -42,7 +42,21 @@ export function useBoardSocket(boardId: string, events: BoardEvents) {
     if (!boardId) return;
 
     const socket = getSocket();
-    socket.emit("join-board", boardId);
+
+    // Send userId so the server can track presence
+    let userId: string | null = null;
+    try {
+      // authentication uses `taskflow_user` as the key
+      userId = JSON.parse(localStorage.getItem("taskflow_user") || "{}").id || null;
+    } catch {
+      /* ignore */
+    }
+
+    // Debug: log join attempt
+    // eslint-disable-next-line no-console
+    console.log("[socket] emitting join-board", { boardId, userId });
+
+    socket.emit("join-board", boardId, userId);
 
     const onCardAdded = (d: unknown) => eventsRef.current.onCardAdded?.(d);
     const onCardUpdated = (d: unknown) => eventsRef.current.onCardUpdated?.(d);
@@ -71,4 +85,35 @@ export function useBoardSocket(boardId: string, events: BoardEvents) {
       socket.emit("leave-board", boardId);
     };
   }, [boardId]);
+}
+
+export function useBoardPresence(boardId: string): string[] {
+  const [activeUserIds, setActiveUserIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!boardId) return;
+
+    const socket = getSocket();
+
+    const onPresence = (data: { boardId: string; activeUserIds: string[] }) => {
+      if (data.boardId === boardId) {
+        // Debug: log incoming presence info
+        // eslint-disable-next-line no-console
+        console.log("[socket] received board:presence", data);
+
+        setActiveUserIds(data.activeUserIds);
+      }
+    };
+
+    socket.on("board:presence", onPresence);
+
+    // Request current presence in case we missed the initial broadcast
+    socket.emit("request-presence", boardId);
+
+    return () => {
+      socket.off("board:presence", onPresence);
+    };
+  }, [boardId]);
+
+  return activeUserIds;
 }

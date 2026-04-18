@@ -1,16 +1,15 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Plus, UserPlus, Clock, ArrowLeft } from "lucide-react";
 import Sidebar from "@/components/sidebar";
-import Navbar from "@/components/searchbar";
 import CreateBoardModal from "@/components/migrated/CreateBoardModal";
 import InviteMemberModal from "@/components/migrated/InviteMemberModal";
 import type { ProjectMember } from "@/components/migrated/types";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ;
 
 interface Board {
   id: string;
@@ -31,7 +30,6 @@ export default function ProjectWorkspacePage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
   const headers = useCallback((): Record<string, string> => {
     const token = getToken();
@@ -125,15 +123,7 @@ export default function ProjectWorkspacePage() {
     fetchBoards();
   }, [fetchBoards]);
 
-  const filteredBoards = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return boards;
-    return boards.filter(
-      (board) =>
-        board.name.toLowerCase().includes(query) ||
-        board.description.toLowerCase().includes(query),
-    );
-  }, [boards, searchTerm]);
+  const filteredBoards = boards;
 
   const handleCreateBoard = async (newBoard: { name: string; description: string; color: string; backgroundImage?: string }) => {
     try {
@@ -182,70 +172,68 @@ export default function ProjectWorkspacePage() {
       <Sidebar activeItem="Projects" />
 
       <div className="flex flex-1 flex-col">
-        <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} notificationCount={0} />
-
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="mb-6 rounded-2xl bg-white px-6 py-4 shadow-md">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="rounded-lg p-1.5 transition-colors hover:bg-gray-100"
-                >
-                  <ArrowLeft className="h-5 w-5 text-gray-500" />
-                </button>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">{projectName}</h1>
-                  <p className="text-xs text-gray-500">{projectMembers.length} member{projectMembers.length !== 1 ? "s" : ""}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                {/* Active members */}
-                <div className="flex items-center gap-1">
-                  {projectMembers
-                    .filter((m) => m.status === "active")
-                    .map((member, i) => (
-                      <div
-                        key={member.id}
-                        className={`relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${member.color} text-xs font-semibold text-white ring-2 ring-white transition-transform hover:scale-110 ${i > 0 ? "-ml-2" : ""}`}
-                        title={`${member.name} (active)`}
-                      >
-                        {member.avatar}
-                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-400" />
-                      </div>
-                    ))}
-                  {/* Idle / pending members */}
-                  {projectMembers
-                    .filter((m) => m.status === "pending")
-                    .map((member, i) => (
-                      <div
-                        key={member.id}
-                        className={`relative flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-xs font-semibold text-white ring-2 ring-white transition-transform hover:scale-110 ${projectMembers.filter((m) => m.status === "active").length > 0 || i > 0 ? "-ml-2" : ""}`}
-                        title={`${member.name} (pending)`}
-                      >
-                        {member.avatar}
-                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-gray-400" />
-                      </div>
-                    ))}
-                  <button
-                    onClick={() => setShowInviteModal(true)}
-                    className="flex h-8 w-8 -ml-1 items-center justify-center rounded-full border-2 border-dashed border-gray-300 text-gray-400 transition-all hover:border-[#4F46E5] hover:text-[#4F46E5]"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => setShowInviteModal(true)}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Invite
-                </button>
-              </div>
+        {/* Project header bar (replaces search navbar) */}
+        <header className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="rounded-lg p-1.5 transition-colors hover:bg-gray-100"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-500" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">{projectName}</h1>
+              <p className="text-xs text-gray-500">{projectMembers.length} member{projectMembers.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
+
+          <div className="flex items-center gap-4">
+            {/* Active members */}
+            <div className="flex items-center">
+              {projectMembers
+                .filter((m) => m.status === "active")
+                .map((member, i) => (
+                  <div
+                    key={member.id}
+                    className={`relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${member.color} text-xs font-semibold text-white ring-2 ring-white transition-transform hover:scale-110 ${i > 0 ? "-ml-2" : ""}`}
+                    title={`${member.name} (active)`}
+                  >
+                    {member.avatar}
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-400" />
+                  </div>
+                ))}
+              {/* Pending members */}
+              {projectMembers
+                .filter((m) => m.status === "pending")
+                .map((member, i) => (
+                  <div
+                    key={member.id}
+                    className={`relative flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-xs font-semibold text-white ring-2 ring-white transition-transform hover:scale-110 ${projectMembers.filter((m) => m.status === "active").length > 0 || i > 0 ? "-ml-2" : ""}`}
+                    title={`${member.name} (pending)`}
+                  >
+                    {member.avatar}
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-gray-400" />
+                  </div>
+                ))}
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="flex h-8 w-8 -ml-1 items-center justify-center rounded-full border-2 border-dashed border-gray-300 text-gray-400 transition-all hover:border-[#4F46E5] hover:text-[#4F46E5]"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              <UserPlus className="h-4 w-4" />
+              Invite
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-8">
 
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Boards</h2>

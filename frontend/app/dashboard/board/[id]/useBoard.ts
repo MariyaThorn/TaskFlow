@@ -5,7 +5,7 @@ import type { Card, Column, TeamMember, KanbanLabel } from "@/components/migrate
 import { getToken } from "@/lib/auth";
 import { useBoardSocket } from "@/lib/socket";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ;
 
 const fallbackColors = [
   "from-blue-500 to-blue-600",

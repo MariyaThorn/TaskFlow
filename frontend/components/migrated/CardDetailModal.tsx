@@ -5,7 +5,7 @@ import { X, AlignLeft, Tag, Paperclip, MessageSquare, Trash2, FileText, Download
 import type { Card, KanbanLabel, KanbanAttachment } from "@/components/migrated/types";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ;
 
 const LABEL_COLORS = [
   { name: "Red", value: "bg-red-500" },

@@ -15,6 +15,8 @@ var authRouter = require('./routes/auth');
 var adminRouter = require('./routes/admin');
 var projectsRouter = require('./routes/projects');
 var boardsRouter = require('./routes/boards');
+var swaggerUi = require('swagger-ui-express');
+var swaggerSpec = require('./swagger');
 
 // Connect to MongoDB
 connectDB();
@@ -60,6 +62,7 @@ app.use(
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/api/auth', authRouter);

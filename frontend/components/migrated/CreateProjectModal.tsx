@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X, UserPlus, Link2, Copy, Check, Search } from "lucide-react";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ;
 
 interface CreateProjectModalProps {
   onClose: () => void;

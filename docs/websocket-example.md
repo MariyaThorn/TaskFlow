@@ -1,198 +1,216 @@
-# WebSocket Example — Backend + Frontend (Socket.IO)
+# TaskFlow — Backend & WebSocket Technical Summary
 
-This file contains minimal, copy-pasteable examples showing how to wire up Socket.IO with an Express backend and a Next.js frontend. Keep socket authentication and server-side validation strict — never trust client events.
-
----
-
-## Backend (example `backend/socket.js`)
-
-```js
-// backend/socket.js
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken'); // optional - if you use JWT
-let io;
-
-function init(server) {
-  io = new Server(server, {
-    cors: { origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3001' },
-    path: '/socket.io',
-  });
-
-  // Handshake authentication (optional)
-  io.use(async (socket, next) => {
-    try {
-      const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-      if (!token) return next(); // allow anonymous sockets if desired
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
-      socket.user = payload; // attach user info to socket
-      next();
-    } catch (err) {
-      // If you require auth, call next(new Error('unauthorized'))
-      next();
-    }
-  });
-
-  io.on('connection', (socket) => {
-    console.log('socket connected', socket.id, 'user:', socket.user?.id || 'anon');
-
-    socket.on('join-board', ({ boardId }) => {
-      socket.join(`board:${boardId}`);
-      io.to(`board:${boardId}`).emit('board:presence', { userId: socket.user?.id, action: 'join' });
-    });
-
-    socket.on('leave-board', ({ boardId }) => {
-      socket.leave(`board:${boardId}`);
-      io.to(`board:${boardId}`).emit('board:presence', { userId: socket.user?.id, action: 'leave' });
-    });
-
-    // Example: client asks to create a card — validate and persist on server
-    socket.on('card:create', async (payload) => {
-      // IMPORTANT: validate payload and persist to DB here
-      // const card = await CardModel.create({...payload});
-      // then broadcast
-      io.to(`board:${payload.boardId}`).emit('board:card-added', payload.card || payload);
-    });
-
-    socket.on('disconnect', () => {
-      // optional cleanup
-    });
-  });
-}
-
-function getIo() {
-  if (!io) throw new Error('Socket.io not initialized');
-  return io;
-}
-
-module.exports = { init, getIo };
-```
-
-### Integrate with your server entry (example `bin/www` or `server.js`)
-
-```js
-const http = require('http');
-const app = require('./app');
-const server = http.createServer(app);
-const { init } = require('./socket');
-
-init(server);
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('listening on', PORT));
-```
-
-### Emitting from Express routes
-
-In any route handler you can `require('./socket').getIo()` to broadcast after persisting data:
-
-```js
-const { getIo } = require('./socket');
-
-app.post('/api/boards/:id/cards', authMiddleware, async (req, res) => {
-  const boardId = req.params.id;
-  // validate and save card to DB
-  const card = await createCardInDb(boardId, req.body);
-
-  // broadcast to connected board clients
-  const io = getIo();
-  io.to(`board:${boardId}`).emit('board:card-added', card);
-
-  res.status(201).json({ card });
-});
-```
+> This document explains exactly how TaskFlow's backend server and real-time WebSocket layer work. Written for presentation and academic explanation.
 
 ---
 
-## Frontend (Next.js) — client example
+## 1. Backend Overview
 
-Place this in a client-only module (e.g. `frontend/lib/socket.ts`) and only call from browser code (useEffect).
+TaskFlow's backend is a **Node.js + Express** REST API server running on **port 3000**.
 
-```ts
-// frontend/lib/socket.ts
-import { io, Socket } from 'socket.io-client';
+### Startup sequence (`bin/www`)
 
-let socket: Socket | null = null;
+When the server starts, three things happen in order:
 
-export function initSocket(token?: string) {
-  if (!socket) {
-    socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000', {
-      path: '/socket.io',
-      autoConnect: false,
-      transports: ['websocket'],
-      auth: { token }, // passed during handshake
-    });
-    socket.connect();
-  }
-  return socket;
-}
+1. `app.js` is loaded — Express is configured with middleware, routes, and session storage.
+2. An `http.Server` wraps the Express app.
+3. `initSocket(server)` is called — Socket.IO attaches to the **same HTTP server**, so REST and WebSocket traffic share one port.
 
-export function disconnectSocket() {
-  if (socket) { socket.disconnect(); socket = null; }
+```
+Node.js Process (port 3000)
+├── Express HTTP Server  ← handles all /api/* REST requests
+└── Socket.IO Server     ← handles ws:// WebSocket connections
+```
+
+### Middleware stack (`app.js`)
+
+Every incoming HTTP request passes through these layers in order:
+
+| Layer | Purpose |
+|---|---|
+| `cors` | Allows requests from the frontend origin (`FRONTEND_URL`) |
+| `express-session` | Reads/writes the user's session cookie |
+| `express.json()` | Parses JSON request bodies |
+| `multer` (on specific routes) | Handles file uploads (board/project backgrounds, attachments) |
+| `protect` (auth middleware) | Verifies identity before protected routes |
+| Route handlers | The actual business logic |
+
+### Dual Authentication (`middleware/auth.js`)
+
+Every protected route runs the `protect` middleware, which checks identity in two steps:
+
+```
+Request arrives
+    │
+    ▼
+1. Is there a valid session cookie?  ──yes──▶  Load user from DB → proceed
+    │ no
+    ▼
+2. Is there a valid JWT Bearer token?  ──yes──▶  Decode JWT → load user → proceed
+    │ no
+    ▼
+   401 Unauthorized
+```
+
+- **Sessions** are stored in MongoDB (via `connect-mongo`), expire after 7 days, and use `httpOnly` cookies. This is used by the browser client after login.
+- **JWT tokens** are also issued on login and stored in `localStorage`. This lets API clients (mobile apps, Swagger UI, scripts) authenticate without a session cookie.
+
+Both methods produce the same result: `req.user` is set to the full user document from MongoDB before the route handler runs.
+
+### Database (`config/db.js` + Mongoose)
+
+MongoDB is used as the database. There are **4 main collections**:
+
+| Collection | What it stores |
+|---|---|
+| `users` | Accounts, profile info, settings, hashed passwords |
+| `projects` | Projects, member list, invitations, invite codes |
+| `boards` | Boards — contains embedded columns and cards |
+| `teams` | Teams, member list, linked projects |
+| `sessions` | Express session store (managed by `connect-mongo`) |
+
+Boards use **embedded subdocuments** — columns and cards live inside the board document rather than as separate collections. This keeps a full board load to a single MongoDB query.
+
+### REST API Routes
+
+| Prefix | File | Responsibility |
+|---|---|---|
+| `/api/auth` | `routes/auth.js` | Register, login, logout, get current user |
+| `/api/users` | `routes/users.js` | Profile, password, settings, account deletion |
+| `/api/projects` | `routes/projects.js` | Project CRUD, invitations, invite links |
+| `/api/boards` | `routes/boards.js` | Board CRUD, columns, cards, file uploads |
+| `/api/teams` | `routes/teams.js` | Team CRUD, members, team projects |
+| `/api/admin` | `routes/admin.js` | Session inspection and termination (admin only) |
+| `/api-docs` | `swagger.js` | Interactive Swagger UI documentation |
+
+---
+
+## 2. WebSocket Layer (Real-time)
+
+TaskFlow uses **Socket.IO** to push live updates to all users viewing the same board simultaneously — no polling needed.
+
+### How Socket.IO is initialized
+
+In `bin/www`, `initSocket(server)` is called with the HTTP server:
+
+```js
+var server = http.createServer(app);
+initSocket(server);   // Socket.IO binds to the same port as Express
+```
+
+Socket.IO runs alongside Express on port 3000. A WebSocket connection (`ws://`) is upgraded from a regular HTTP connection by the browser automatically.
+
+### Connection lifecycle
+
+```
+Browser opens Board page
+        │
+        ▼
+  socket.connect()  →  server: 'connection' event fires, socket gets unique ID
+        │
+        ▼
+  client emits 'join-board' (boardId, userId)
+        │
+        ▼
+  server: socket.join('board:<boardId>')   ← socket enters a named room
+  server: broadcastPresence(boardId)       ← tells everyone who is online
+        │
+        ▼
+  User works on the board (add/move/edit cards)
+        │
+        ▼
+  REST API call (e.g. POST /api/boards/:id/cards)
+        │
+        ▼
+  Route handler saves change to MongoDB
+  Route handler calls: io.to('board:<boardId>').emit('board:card-added', card)
+        │
+        ▼
+  ALL other sockets in that board room receive the event instantly
+        │
+        ▼
+  User leaves or closes tab → 'disconnect' event
+  server: broadcastPresence(boardId)  ← removes user from presence list
+```
+
+### Rooms
+
+Socket.IO **rooms** are the key concept. Every board has its own room named `board:<boardId>`. When a client joins a board, their socket is added to that room. When the server emits an event to `io.to('board:<boardId>')`, only clients in that room receive it.
+
+This means updates to Board A never reach users viewing Board B, even though they're on the same server.
+
+### Events reference
+
+| Direction | Event | Payload | Description |
+|---|---|---|---|
+| Client → Server | `join-board` | `boardId, userId` | Client enters a board room |
+| Client → Server | `leave-board` | `boardId` | Client leaves a board room |
+| Client → Server | `cursor-move` | `boardId, userId, userName, userColor, x, y` | Sends cursor position |
+| Client → Server | `request-presence` | `boardId` | Asks for current presence list |
+| Server → Client | `board:presence` | `{ boardId, activeUserIds[] }` | Who is currently online on the board |
+| Server → Client | `board:cursor-move` | `{ boardId, userId, x, y, ... }` | Live cursor positions of other users |
+| Server → Client | `board:card-added` | card object | A new card was created |
+| Server → Client | `board:card-updated` | card object | A card was edited |
+| Server → Client | `board:card-moved` | `{ cardId, sourceColumnId, targetColumnId }` | A card was moved |
+| Server → Client | `board:card-deleted` | `{ cardId, columnId }` | A card was removed |
+| Server → Client | `board:column-added` | column object | A new column was created |
+| Server → Client | `board:column-renamed` | `{ columnId, title }` | A column was renamed |
+| Server → Client | `board:column-deleted` | `{ columnId }` | A column was removed |
+
+### Presence tracking (`broadcastPresence`)
+
+The `broadcastPresence` function is called whenever someone joins, leaves, or disconnects:
+
+```js
+async function broadcastPresence(boardId) {
+  const sockets = await io.in(`board:${boardId}`).fetchSockets();
+  const activeUserIds = [...new Set(sockets.map(s => s.data.userId).filter(Boolean))];
+  io.to(`board:${boardId}`).emit('board:presence', { boardId, activeUserIds });
 }
 ```
 
-### Usage inside a board React component
+It fetches all sockets currently in the board room, collects their `userId` (stored when they joined), deduplicates, and broadcasts the list. The frontend uses this to show user avatars for who is online.
 
-```tsx
-import { useEffect } from 'react';
-import { initSocket } from '@/lib/socket';
+### Live cursors
 
-export default function BoardPage({ boardId }) {
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const token = localStorage.getItem('token');
-    const socket = initSocket(token);
+When a user moves their mouse, the frontend emits `cursor-move` with their position and identity. The server relays it to everyone else in the room using `socket.to(room)` (which excludes the sender), so users can see each other's cursors in real-time.
 
-    socket.emit('join-board', { boardId });
+---
 
-    const handleCardAdded = (card) => {
-      // update local state
-    };
-    socket.on('board:card-added', handleCardAdded);
+## 3. How REST and WebSocket work together
 
-    return () => {
-      socket.emit('leave-board', { boardId });
-      socket.off('board:card-added', handleCardAdded);
-    };
-  }, [boardId]);
+REST and WebSocket are complementary — not competing:
 
-  return <div>Board UI</div>;
-}
+- **REST** handles **actions**: creating, updating, deleting data. It validates, saves to MongoDB, and returns a response to the caller.
+- **WebSocket** handles **broadcasting**: after REST saves the change, the route emits a socket event so every other connected client updates their UI without refreshing.
+
+Example — user creates a card:
+
+```
+Frontend (User A)          Backend                      Frontend (User B)
+      │                       │                                │
+      │  POST /api/boards/:id/cards                            │
+      │──────────────────────▶│                                │
+      │                       │ 1. Validate request            │
+      │                       │ 2. Save card to MongoDB        │
+      │                       │ 3. emit('board:card-added')    │
+      │  201 { card }         │──────────────────────────────▶│
+      │◀──────────────────────│               board:card-added │
+      │                                                        │
+      │  Updates own UI from  │              Updates UI from   │
+      │  HTTP response        │              socket event      │
 ```
 
 ---
 
-## Authentication & security notes
-
-- Prefer sending an auth token in the handshake (`auth: { token }`) rather than query string.
-- Validate and persist all changes on the server before broadcasting updates.
-- Use `io.use()` to verify the token during handshake and attach `socket.user`.
-- Rate-limit and validate payload sizes to avoid abuse.
-
-## Quick test/run commands
+## 4. Running the backend
 
 ```powershell
-# backend
 cd backend
-npm run dev    # or: node ./bin/www
-
-# frontend
-cd frontend
-npm run dev
+npm run dev        # uses nodemon for auto-restart
+# or
+node ./bin/www     # production start
 ```
 
-If port 3000 is in use, free it (Windows example):
+API docs are available at `http://localhost:3000/api-docs` (Swagger UI).
 
-```powershell
-netstat -ano | findstr :3000
-taskkill /PID <pid> /F
-```
-
----
-
-If you want, I can:
-
-- add the `backend/socket.js` file to your repo and wire `bin/www` to call `init(server)`,
-- add `frontend/lib/socket.ts` and show an integrated board component using your existing `useBoard` hook.
-
-Tell me which action you want next and I will apply it.

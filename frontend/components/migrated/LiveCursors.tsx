@@ -25,7 +25,7 @@ export default function LiveCursors({ cursors }: LiveCursorsProps) {
   if (cursors.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[100] overflow-hidden">
+    <div className="pointer-events-none absolute inset-0 z-[100] overflow-hidden">
       {cursors.map((cursor) => {
         const cursorColor = gradientToColor(cursor.userColor);
         return (

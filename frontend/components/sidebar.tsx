@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, Users, Settings, LogOut, ListTodo, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { clearAuth } from "@/lib/auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 type NavItem = {
   label: string;
@@ -20,13 +20,20 @@ type SidebarProps = {
 export default function Sidebar({ activeItem = "Projects" }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sidebar_collapsed") === "true";
-    }
-    return false;
-  });
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hydratedRef = useRef(false);
+
+  // Read collapsed preference from localStorage after hydration (avoids SSR mismatch)
+  // We use a ref so the very first render after mount has no transition
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebar_collapsed") === "true";
+    setCollapsed(saved);
+    // Allow transitions only after the initial state is applied
+    requestAnimationFrame(() => {
+      hydratedRef.current = true;
+    });
+  }, []);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -155,9 +162,10 @@ export default function Sidebar({ activeItem = "Projects" }: SidebarProps) {
 
       {/* Desktop sidebar */}
       <aside
-        className={`sticky top-0 z-30 hidden h-screen flex-col border-r border-[#e0aaff]/30 bg-[#ede0ff] transition-all duration-300 md:flex ${
+        className={`sticky top-0 z-30 hidden h-screen flex-col border-r border-[#e0aaff]/30 bg-[#ede0ff] md:flex ${
           collapsed ? "w-[72px]" : "w-64"
         }`}
+        style={{ transition: hydratedRef.current ? "all 300ms" : "none" }}
       >
         {sidebarContent}
       </aside>

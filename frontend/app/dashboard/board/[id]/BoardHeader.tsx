@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { ArrowLeft, ImageIcon, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { TeamMember } from "@/components/migrated/types";
@@ -25,15 +25,56 @@ interface BoardHeaderProps {
   projectMembers: TeamMember[];
   currentUserId: string | null;
   activeUserIds?: string[];
+  cursorUserIds?: string[];
   backgroundImage?: string;
   onBackgroundChange?: (url: string) => void;
 }
 
-export default function BoardHeader({ projectName, boardName, projectId, boardId, projectMembers, currentUserId, activeUserIds = [], backgroundImage, onBackgroundChange }: BoardHeaderProps) {
+export default function BoardHeader({ projectName, boardName, projectId, boardId, projectMembers, currentUserId, activeUserIds = [], cursorUserIds = [], backgroundImage, onBackgroundChange }: BoardHeaderProps) {
   const router = useRouter();
   const [showBgPicker, setShowBgPicker] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Track join/leave animations for status dots
+  const prevActiveIdsRef = useRef<string[]>([]);
+  const initializedRef = useRef(false);
+  const [animatingIds, setAnimatingIds] = useState<Map<string, "pop-in" | "pop-out">>(new Map());
+
+  useLayoutEffect(() => {
+    const prev = prevActiveIdsRef.current;
+
+    if (!initializedRef.current) {
+      // On first presence data, just record the state — no animation
+      initializedRef.current = true;
+      prevActiveIdsRef.current = [...activeUserIds];
+      return;
+    }
+
+    const joined = activeUserIds.filter(id => !prev.includes(id) && id !== currentUserId);
+    const left   = prev.filter(id => !activeUserIds.includes(id) && id !== currentUserId);
+    prevActiveIdsRef.current = [...activeUserIds];
+
+    if (joined.length === 0 && left.length === 0) return;
+
+    setAnimatingIds(cur => {
+      const next = new Map(cur);
+      joined.forEach(id => next.set(id, "pop-in"));
+      left.forEach(id => next.set(id, "pop-out"));
+      return next;
+    });
+
+    const ids = [...joined, ...left];
+    const timer = setTimeout(() => {
+      setAnimatingIds(cur => {
+        const next = new Map(cur);
+        ids.forEach(id => next.delete(id));
+        return next;
+      });
+    }, 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeUserIds, currentUserId]);
 
   const saveBg = async (url: string) => {
     onBackgroundChange?.(url);
@@ -165,6 +206,9 @@ export default function BoardHeader({ projectName, boardName, projectId, boardId
         <div className="hidden items-center sm:flex">
           {projectMembers.slice(0, 6).map((member, i) => {
             const isActive = activeUserIds.includes(member.id);
+            const anim = animatingIds.get(member.id);
+            // Only show members who are active or animating out
+            if (!isActive && anim !== "pop-out") return null;
             return (
               <UserAvatar
                 key={member.id}
@@ -172,6 +216,7 @@ export default function BoardHeader({ projectName, boardName, projectId, boardId
                 avatar={member.avatar}
                 color={member.color}
                 isActive={isActive}
+                statusAnimation={anim}
                 showStatus
                 className={i > 0 ? "-ml-2" : ""}
               />

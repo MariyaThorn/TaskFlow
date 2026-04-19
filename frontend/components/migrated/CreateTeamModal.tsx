@@ -58,7 +58,7 @@ export default function CreateTeamModal({ onClose, onCreate }: CreateTeamModalPr
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Engineering"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               required
               autoFocus
             />
@@ -70,7 +70,7 @@ export default function CreateTeamModal({ onClose, onCreate }: CreateTeamModalPr
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of the team..."
-              className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+              className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               rows={3}
             />
           </div>
@@ -94,7 +94,7 @@ export default function CreateTeamModal({ onClose, onCreate }: CreateTeamModalPr
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button type="submit" className="flex-1 rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA]">
+            <button type="submit" className="flex-1 rounded-xl bg-[#5a189a] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#3c096c]">
               Create Team
             </button>
             <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-gray-100 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-200">

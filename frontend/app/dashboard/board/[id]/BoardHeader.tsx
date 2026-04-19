@@ -1,54 +1,183 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, ImageIcon, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { TeamMember } from "@/components/migrated/types";
+import { getToken } from "@/lib/auth";
+import UserAvatar from "@/components/migrated/UserAvatar";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const BACKEND_URL = API_URL?.replace("/api", "") || "http://localhost:3000";
+
+const PRESET_BACKGROUNDS = [
+  "/back-ground-theme/1.png",
+  "/back-ground-theme/2.png",
+  "/back-ground-theme/3.png",
+  "/back-ground-theme/Galaxy12.jpg",
+];
 
 interface BoardHeaderProps {
   projectName: string;
   boardName: string;
   projectId: string;
+  boardId: string;
   projectMembers: TeamMember[];
   currentUserId: string | null;
   activeUserIds?: string[];
+  backgroundImage?: string;
+  onBackgroundChange?: (url: string) => void;
 }
 
-export default function BoardHeader({ projectName, boardName, projectId, projectMembers, currentUserId, activeUserIds = [] }: BoardHeaderProps) {
+export default function BoardHeader({ projectName, boardName, projectId, boardId, projectMembers, currentUserId, activeUserIds = [], backgroundImage, onBackgroundChange }: BoardHeaderProps) {
   const router = useRouter();
+  const [showBgPicker, setShowBgPicker] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const saveBg = async (url: string) => {
+    onBackgroundChange?.(url);
+    // Store relative path in DB (strip BACKEND_URL prefix if present)
+    const dbUrl = url.startsWith(BACKEND_URL) ? url.slice(BACKEND_URL.length) : url;
+    try {
+      const token = getToken();
+      await fetch(`${API_URL}/boards/${boardId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: "include",
+        body: JSON.stringify({ backgroundImage: dbUrl }),
+      });
+    } catch {
+      // silent
+    }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const token = getToken();
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${API_URL}/boards/${boardId}/background`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        body: form,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        saveBg(data.url.startsWith("/uploads/") ? `${BACKEND_URL}${data.url}` : data.url);
+      }
+    } catch {
+      // silent
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
-    <header className="shrink-0 flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4">
-      <div className="flex items-center gap-4">
+    <header className="shrink-0 flex min-h-[4rem] flex-wrap items-center justify-between gap-3 border-b border-[#e0aaff]/30 bg-[#ede0ff] px-4 py-2 sm:px-8">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button
           onClick={() => router.push(projectId ? `/dashboard/project/${projectId}` : "/dashboard")}
-          className="rounded-lg p-1.5 transition-colors hover:bg-gray-100"
+          className="rounded-lg p-1.5 transition-colors hover:bg-[#5a189a]/10"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-500" />
+          <ArrowLeft className="h-5 w-5 text-[#5a189a]" />
         </button>
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">{projectName ? `${projectName} - ${boardName}` : boardName}</h1>
-          <p className="text-xs text-gray-500">{projectMembers.length} member{projectMembers.length !== 1 ? "s" : ""}</p>
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-bold text-[#3c096c] sm:text-lg">{projectName ? `${projectName} - ${boardName}` : boardName}</h1>
+          <p className="text-xs text-[#5a189a]/60">{projectMembers.length} member{projectMembers.length !== 1 ? "s" : ""}</p>
         </div>
       </div>
 
-      <div className="flex items-center">
-        {projectMembers.map((member, i) => {
-          const isActive = activeUserIds.includes(member.id);
-          return (
-            <div
-              key={member.id}
-              className={`relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${member.color} text-xs font-semibold text-white ring-2 ring-white transition-transform hover:scale-110 ${i > 0 ? "-ml-2" : ""}`}
-              title={`${member.name}${member.id === currentUserId ? " (you)" : ""} — ${isActive ? "active" : "idle"}`}
-            >
-              {member.avatar}
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
-                  isActive ? "bg-green-400" : "bg-gray-400"
-                }`}
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Background picker toggle */}
+        <div className="relative">
+          <button
+            onClick={() => setShowBgPicker(!showBgPicker)}
+            className="flex items-center gap-1.5 rounded-lg border border-[#e0aaff]/50 bg-white/70 px-2 py-1.5 text-sm font-medium text-[#5a189a] transition-colors hover:bg-white sm:px-3"
+            title="Change background"
+          >
+            <ImageIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Background</span>
+          </button>
+
+          {showBgPicker && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowBgPicker(false)} />
+              <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-[#e0aaff]/40 bg-white p-4 shadow-xl">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-[#3c096c]">Board Background</h3>
+                  <button onClick={() => setShowBgPicker(false)} className="rounded p-0.5 hover:bg-gray-100">
+                    <X className="h-4 w-4 text-gray-400" />
+                  </button>
+                </div>
+
+                {/* Preset images */}
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  {PRESET_BACKGROUNDS.map((url) => (
+                    <button
+                      key={url}
+                      onClick={() => { saveBg(url); setShowBgPicker(false); }}
+                      className={`relative h-16 overflow-hidden rounded-lg border-2 transition-all hover:scale-[1.03] ${backgroundImage === url ? "border-[#5a189a] ring-2 ring-[#5a189a]/30" : "border-transparent hover:border-[#e0aaff]"}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Upload custom */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#e0aaff]/50 bg-[#f8f0ff] px-3 py-2.5 text-sm font-medium text-[#5a189a] transition-colors hover:border-[#9d4edd] hover:bg-[#ede0ff] disabled:opacity-50"
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "Uploading..." : "Upload image"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleUpload}
+                />
+
+                {/* Remove background */}
+                {backgroundImage && (
+                  <button
+                    onClick={() => { saveBg(""); setShowBgPicker(false); }}
+                    className="mt-2 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                  >
+                    Remove background
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Active members */}
+        <div className="hidden items-center sm:flex">
+          {projectMembers.slice(0, 6).map((member, i) => {
+            const isActive = activeUserIds.includes(member.id);
+            return (
+              <UserAvatar
+                key={member.id}
+                name={`${member.name}${member.id === currentUserId ? " (you)" : ""}`}
+                avatar={member.avatar}
+                color={member.color}
+                isActive={isActive}
+                showStatus
+                className={i > 0 ? "-ml-2" : ""}
               />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </header>
   );

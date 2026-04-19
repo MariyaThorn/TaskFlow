@@ -15,6 +15,7 @@ var authRouter = require('./routes/auth');
 var adminRouter = require('./routes/admin');
 var projectsRouter = require('./routes/projects');
 var boardsRouter = require('./routes/boards');
+var teamsRouter = require('./routes/teams');
 var swaggerUi = require('swagger-ui-express');
 var swaggerSpec = require('./swagger');
 
@@ -64,11 +65,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/boards', boardsRouter);
+app.use('/api/teams', teamsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

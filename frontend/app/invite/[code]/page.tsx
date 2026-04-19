@@ -59,7 +59,7 @@ export default function InvitePage() {
             <p className="mb-6 text-gray-600">You need to sign in before joining this project.</p>
             <button
               onClick={() => router.push(`/auth/sign-in?redirect=/invite/${code}`)}
-              className="rounded-xl bg-[#4F46E5] px-6 py-3 font-medium text-white transition-colors hover:bg-[#4338CA]"
+              className="rounded-xl bg-[#5a189a] px-6 py-3 font-medium text-white transition-colors hover:bg-[#3c096c]"
             >
               Sign In
             </button>
@@ -76,7 +76,7 @@ export default function InvitePage() {
             </p>
             <button
               onClick={() => router.push("/dashboard")}
-              className="rounded-xl bg-[#4F46E5] px-6 py-3 font-medium text-white transition-colors hover:bg-[#4338CA]"
+              className="rounded-xl bg-[#5a189a] px-6 py-3 font-medium text-white transition-colors hover:bg-[#3c096c]"
             >
               Go to Dashboard
             </button>

@@ -32,6 +32,14 @@ function initSocket(server) {
       if (boardId) broadcastPresence(boardId);
     });
 
+    // Live cursor tracking
+    socket.on('cursor-move', (data) => {
+      // data: { boardId, userId, userName, userAvatar, userColor, x, y }
+      if (data.boardId) {
+        socket.to(`board:${data.boardId}`).emit('board:cursor-move', data);
+      }
+    });
+
     socket.on('disconnect', () => {
       // Broadcast presence update for the board this socket was on
       if (socket.data.boardId) {

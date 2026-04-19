@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { X, AlignLeft, Tag, Paperclip, MessageSquare, Trash2, FileText, Download } from "lucide-react";
-import type { Card, KanbanLabel, KanbanAttachment } from "@/components/migrated/types";
+import { X, AlignLeft, Tag, Paperclip, MessageSquare, Trash2, FileText, Download, User } from "lucide-react";
+import type { Card, KanbanLabel, KanbanAttachment, TeamMember } from "@/components/migrated/types";
 import { getToken } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ;
@@ -22,12 +22,13 @@ interface CardDetailModalProps {
   card: Card;
   boardId: string;
   columnTitle: string;
+  members?: TeamMember[];
   onClose: () => void;
   onUpdate: (card: Card) => void;
   onDelete: (cardId: string) => void;
 }
 
-export default function CardDetailModal({ card, boardId, columnTitle, onClose, onUpdate, onDelete }: CardDetailModalProps) {
+export default function CardDetailModal({ card, boardId, columnTitle, members = [], onClose, onUpdate, onDelete }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description);
   const [dueDate, setDueDate] = useState(card.dueDate);
@@ -42,6 +43,8 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0].value);
   const [uploading, setUploading] = useState(false);
+  const [assignee, setAssignee] = useState<{ name: string; avatar: string; color: string } | undefined>(card.assignee);
+  const [showAssigneeList, setShowAssigneeList] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
@@ -53,6 +56,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
       progress,
       labels,
       attachments,
+      assignee,
     });
   };
 
@@ -170,12 +174,12 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[#faf5ff] shadow-2xl ring-1 ring-[#e0aaff]/30"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-[#e0aaff]/30 bg-[#ede0ff] p-4 sm:p-6 rounded-t-2xl">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <input
@@ -183,25 +187,25 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={handleSave}
-                className="-mx-2 w-full rounded border-none bg-transparent px-2 text-2xl font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                className="-mx-2 w-full rounded border-none bg-transparent px-2 text-2xl font-semibold text-[#3c096c] focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               />
-              <p className="mt-1 text-sm text-gray-600">
-                in list <span className="font-medium">{columnTitle}</span>
+              <p className="mt-1 text-sm text-[#5a189a]/60">
+                in list <span className="font-medium text-[#5a189a]">{columnTitle}</span>
               </p>
             </div>
-            <button onClick={onClose} className="rounded-xl p-2 transition-colors hover:bg-gray-100">
-              <X className="h-5 w-5 text-gray-600" />
+            <button onClick={onClose} className="rounded-xl p-2 transition-colors hover:bg-[#5a189a]/10">
+              <X className="h-5 w-5 text-[#5a189a]" />
             </button>
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-3 gap-6">
-            <div className="col-span-2 space-y-6">
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="md:col-span-2 space-y-6">
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <Tag className="h-5 w-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Labels</h3>
+                  <Tag className="h-5 w-5 text-[#5a189a]" />
+                  <h3 className="font-semibold text-[#3c096c]">Labels</h3>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {labels.map((label) => (
@@ -216,13 +220,13 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                     </span>
                   ))}
                   {showLabelForm ? (
-                    <div className="flex w-full flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex w-full flex-col gap-2 rounded-xl border border-[#e0aaff]/30 bg-[#f8f0ff] p-3">
                       <input
                         type="text"
                         value={newLabelName}
                         onChange={(e) => setNewLabelName(e.target.value)}
                         placeholder="Label name..."
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                        className="rounded-lg border border-[#e0aaff]/40 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleAddLabel();
@@ -244,7 +248,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                         <button
                           onClick={handleAddLabel}
                           disabled={!newLabelName.trim()}
-                          className="rounded-lg bg-[#4F46E5] px-3 py-1 text-sm font-medium text-white hover:bg-[#4338CA] disabled:opacity-50"
+                          className="rounded-lg bg-[#5a189a] px-3 py-1 text-sm font-medium text-white hover:bg-[#3c096c] disabled:opacity-50"
                         >
                           Add
                         </button>
@@ -259,7 +263,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                   ) : (
                     <button
                       onClick={() => setShowLabelForm(true)}
-                      className="rounded-xl bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                      className="rounded-xl bg-[#ede0ff] px-3 py-1 text-sm font-medium text-[#5a189a] transition-colors hover:bg-[#e0aaff]/40"
                     >
                       + Add label
                     </button>
@@ -269,37 +273,37 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
 
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <AlignLeft className="h-5 w-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Description</h3>
+                  <AlignLeft className="h-5 w-5 text-[#5a189a]" />
+                  <h3 className="font-semibold text-[#3c096c]">Description</h3>
                 </div>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   onBlur={handleSave}
                   placeholder="Add a more detailed description..."
-                  className="min-h-[120px] w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                  className="min-h-[120px] w-full resize-none rounded-xl border border-[#e0aaff]/30 bg-white p-3 text-[#3c096c] placeholder:text-[#5a189a]/30 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                 />
               </div>
 
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <Paperclip className="h-5 w-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Attachments</h3>
+                  <Paperclip className="h-5 w-5 text-[#5a189a]" />
+                  <h3 className="font-semibold text-[#3c096c]">Attachments</h3>
                 </div>
                 {attachments.length > 0 && (
                   <div className="mb-3 space-y-2">
                     {attachments.map((att) => (
-                      <div key={att.id || (att as { _id?: string })._id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
-                        <FileText className="h-8 w-8 shrink-0 text-gray-400" />
+                      <div key={att.id || (att as { _id?: string })._id} className="flex items-center gap-3 rounded-xl border border-[#e0aaff]/30 bg-white p-3">
+                        <FileText className="h-8 w-8 shrink-0 text-[#9d4edd]" />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-gray-900">{att.originalName}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(att.size)}</p>
+                          <p className="truncate text-sm font-medium text-[#3c096c]">{att.originalName}</p>
+                          <p className="text-xs text-[#5a189a]/50">{formatFileSize(att.size)}</p>
                         </div>
                         <a
-                          href={`${API_URL.replace('/api', '')}${att.url}`}
+                          href={`${API_URL?.replace('/api', '') ?? ''}${att.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                          className="rounded-lg p-1.5 text-[#5a189a]/40 hover:bg-[#ede0ff] hover:text-[#5a189a]"
                           title="Download"
                         >
                           <Download className="h-4 w-4" />
@@ -324,7 +328,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-full rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                  className="w-full rounded-xl border-2 border-dashed border-[#e0aaff]/50 bg-white px-4 py-3 text-sm font-medium text-[#5a189a] transition-colors hover:bg-[#ede0ff] hover:border-[#9d4edd] disabled:opacity-50"
                 >
                   {uploading ? "Uploading..." : "Click to upload or drag and drop"}
                 </button>
@@ -332,12 +336,12 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
 
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Comments</h3>
+                  <MessageSquare className="h-5 w-5 text-[#5a189a]" />
+                  <h3 className="font-semibold text-[#3c096c]">Comments</h3>
                 </div>
                 <div className="space-y-4">
                   <div className="flex gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] text-sm font-semibold text-white">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5a189a] to-[#9d4edd] text-sm font-semibold text-white">
                       ME
                     </div>
                     <div className="flex-1">
@@ -345,14 +349,14 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder="Write a comment..."
-                        className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                        className="w-full resize-none rounded-xl border border-[#e0aaff]/30 bg-white p-3 text-[#3c096c] placeholder:text-[#5a189a]/30 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                         rows={3}
                       />
                       {newComment && (
                         <div className="mt-2 flex gap-2">
                           <button
                             onClick={() => setNewComment("")}
-                            className="rounded-xl bg-[#4F46E5] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4338CA]"
+                            className="rounded-xl bg-[#5a189a] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3c096c]"
                           >
                             Save
                           </button>
@@ -371,8 +375,56 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
             </div>
 
             <div className="space-y-3">
+              {/* Assignee */}
               <div>
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-600">Progress</h4>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#5a189a]/70">Assignee</h4>
+                {assignee ? (
+                  <div className="flex items-center gap-2 rounded-xl bg-white border border-[#e0aaff]/30 p-2.5">
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${assignee.color} text-xs font-semibold text-white`}>
+                      {assignee.avatar}
+                    </div>
+                    <span className="flex-1 truncate text-sm font-medium text-[#3c096c]">{assignee.name}</span>
+                    <button
+                      onClick={() => { setAssignee(undefined); setTimeout(handleSave, 0); }}
+                      className="text-xs text-[#5a189a]/50 hover:text-[#5a189a]"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAssigneeList(!showAssigneeList)}
+                    className="flex w-full items-center gap-2 rounded-xl border border-[#e0aaff]/30 bg-white px-3 py-2 text-sm font-medium text-[#5a189a]/60 transition-colors hover:bg-[#ede0ff]"
+                  >
+                    <User className="h-4 w-4" />
+                    Assign member
+                  </button>
+                )}
+                {showAssigneeList && !assignee && members.length > 0 && (
+                  <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-[#e0aaff]/30 bg-white p-2">
+                    {members.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => {
+                          const a = { name: m.name, avatar: m.avatar, color: m.color };
+                          setAssignee(a);
+                          setShowAssigneeList(false);
+                          onUpdate({ ...card, title, description, dueDate, progress, labels, attachments, assignee: a });
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[#f8f0ff]"
+                      >
+                        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${m.color} text-xs font-semibold text-white`}>
+                          {m.avatar}
+                        </div>
+                        <span className="truncate text-sm text-[#3c096c]">{m.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#5a189a]/70">Progress</h4>
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
@@ -383,17 +435,17 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                     onChange={(e) => setProgress(Number(e.target.value))}
                     onMouseUp={handleSave}
                     onTouchEnd={handleSave}
-                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-[#4F46E5]"
+                    className="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#e0aaff]/30 accent-[#5a189a]"
                   />
-                  <span className="min-w-[3ch] text-right text-sm font-bold text-gray-700">{progress}%</span>
+                  <span className="min-w-[3ch] text-right text-sm font-bold text-[#3c096c]">{progress}%</span>
                 </div>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                  <div className="h-full rounded-full bg-[#4F46E5] transition-all duration-200" style={{ width: `${progress}%` }} />
+                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[#e0aaff]/20">
+                  <div className="h-full rounded-full bg-[#5a189a] transition-all duration-200" style={{ width: `${progress}%` }} />
                 </div>
               </div>
 
               <div>
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-600">Due date</h4>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#5a189a]/70">Due date</h4>
                 <input
                   type="date"
                   value={dueDate}
@@ -401,12 +453,12 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
                     setDueDate(e.target.value);
                     onUpdate({ ...card, title, description, dueDate: e.target.value, progress });
                   }}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                  className="w-full rounded-xl border border-[#e0aaff]/30 bg-white px-3 py-2 text-sm text-[#3c096c] focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                 />
               </div>
 
               <div>
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-600">Actions</h4>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#5a189a]/70">Actions</h4>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="flex w-full items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
@@ -421,13 +473,13 @@ export default function CardDetailModal({ card, boardId, columnTitle, onClose, o
 
         {showDeleteConfirm && (
           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-sm">
-            <div className="m-6 max-w-md rounded-xl bg-white p-6 shadow-2xl">
-              <h3 className="mb-2 text-lg font-semibold text-gray-900">Delete Card?</h3>
-              <p className="mb-6 text-sm text-gray-600">
+            <div className="m-6 max-w-md rounded-xl bg-[#faf5ff] p-6 shadow-2xl ring-1 ring-[#e0aaff]/30">
+              <h3 className="mb-2 text-lg font-semibold text-[#3c096c]">Delete Card?</h3>
+              <p className="mb-6 text-sm text-[#5a189a]/60">
                 Are you sure you want to delete &quot;{title}&quot;? This action cannot be undone.
               </p>
               <div className="flex justify-end gap-3">
-                <button onClick={() => setShowDeleteConfirm(false)} className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
+                <button onClick={() => setShowDeleteConfirm(false)} className="rounded-xl bg-[#ede0ff] px-4 py-2 text-sm font-medium text-[#5a189a] transition-colors hover:bg-[#e0aaff]/40">
                   Cancel
                 </button>
                 <button onClick={handleDelete} className="rounded-xl bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600">

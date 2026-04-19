@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ListTodo } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/auth";
@@ -76,20 +75,52 @@ export default function SignIn() {
     }
   };
 
+  /* Cursor sparkle effect */
+  const spawnSparkle = useCallback((x: number, y: number) => {
+    const el = document.createElement("div");
+    const size = Math.random() * 10 + 6;
+    el.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="${size}" height="${size}"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z"/></svg>`;
+    el.style.cssText = `position:fixed;left:${x - size / 2}px;top:${y - size / 2}px;pointer-events:none;z-index:9999;color:#c77dff;opacity:1;transition:all 0.6s ease-out;`;
+    document.body.appendChild(el);
+    const dx = (Math.random() - 0.5) * 40;
+    const dy = (Math.random() - 0.5) * 40 - 20;
+    requestAnimationFrame(() => {
+      el.style.transform = `translate(${dx}px, ${dy}px) scale(0) rotate(${Math.random() * 180}deg)`;
+      el.style.opacity = "0";
+    });
+    setTimeout(() => el.remove(), 650);
+  }, []);
+
+  useEffect(() => {
+    let frame = 0;
+    const onMove = (e: MouseEvent) => {
+      frame++;
+      if (frame % 3 === 0) spawnSparkle(e.clientX, e.clientY);
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [spawnSparkle]);
+
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <Image
-        src="/hero-images/login.jpg"
-        alt="Mountain landscape"
-        fill
-        priority
-        className="object-cover"
-      />
-      <div className="absolute inset-0 bg-slate-900/45" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#44679f]/30 via-[#213056]/55 to-[#0a1228]/75" />
+    <div className="relative min-h-screen overflow-hidden bg-[#240046]">
+      {/* Gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#240046] via-[#3c096c] to-[#10002b]" />
+
+      {/* Radial glow */}
+      <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7b2cbf] opacity-15 blur-[120px]" />
+
+      {/* Sparkle stars */}
+      <svg className="absolute left-[10%] top-[15%] h-4 w-4 text-[#c77dff] opacity-60 animate-pulse" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute right-[15%] top-[10%] h-3 w-3 text-[#9d4edd] opacity-50 animate-[pulse_3s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute left-[5%] top-[60%] h-3.5 w-3.5 text-[#e0aaff] opacity-40 animate-[pulse_4s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute right-[8%] top-[70%] h-2.5 w-2.5 text-[#c77dff] opacity-50 animate-[pulse_2.5s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute left-[25%] top-[80%] h-2 w-2 text-[#9d4edd] opacity-35 animate-[pulse_3.5s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute right-[30%] top-[5%] h-3 w-3 text-[#e0aaff] opacity-45 animate-[pulse_2s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute left-[75%] top-[45%] h-3.5 w-3.5 text-[#c77dff] opacity-30 animate-[pulse_4.5s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
+      <svg className="absolute left-[50%] top-[90%] h-2.5 w-2.5 text-[#9d4edd] opacity-40 animate-pulse" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 11L14.59 13.59L12 22L9.41 13.59L1 11L9.41 8.41L12 0Z" /></svg>
 
       <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-8 text-white shadow-2xl backdrop-blur-md">
+        <div className="w-full max-w-md rounded-3xl border border-[#9d4edd]/25 bg-[#3c096c]/40 p-4 text-white shadow-2xl shadow-[#5a189a]/20 backdrop-blur-md sm:p-8">
           <div className="mb-8 text-center">
             <Link href="/" className="inline-flex items-center gap-2 text-white/95">
               <ListTodo className="h-7 w-7" />
@@ -112,7 +143,7 @@ export default function SignIn() {
                   className={`w-full rounded-full border bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/55 focus:outline-none focus:ring-2 ${
                     errors.email
                       ? "border-red-300/70 focus:border-red-300 focus:ring-red-200/40"
-                      : "border-white/30 focus:border-[#ffd6b3] focus:ring-[#ffd6b3]/40"
+                      : "border-[#9d4edd]/30 focus:border-[#c77dff] focus:ring-[#c77dff]/40"
                   }`}
                 />
                 {errors.email && <p className="mt-1 text-xs text-red-200">{errors.email}</p>}
@@ -129,7 +160,7 @@ export default function SignIn() {
                   className={`w-full rounded-full border bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/55 focus:outline-none focus:ring-2 ${
                     errors.password
                       ? "border-red-300/70 focus:border-red-300 focus:ring-red-200/40"
-                      : "border-white/30 focus:border-[#ffd6b3] focus:ring-[#ffd6b3]/40"
+                      : "border-[#9d4edd]/30 focus:border-[#c77dff] focus:ring-[#c77dff]/40"
                   }`}
                 />
                 {errors.password && <p className="mt-1 text-xs text-red-200">{errors.password}</p>}
@@ -142,7 +173,7 @@ export default function SignIn() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/40 bg-white/10 accent-[#ffd6b3]"
+                  className="h-4 w-4 rounded border-[#9d4edd]/40 bg-white/10 accent-[#c77dff]"
                 />
                 Remember me
               </label>
@@ -160,7 +191,7 @@ export default function SignIn() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-[#ffd6b3] py-2.5 text-sm font-semibold tracking-wide text-slate-900 transition hover:bg-[#ffcaa0] disabled:opacity-60"
+              className="w-full rounded-full bg-[#9d4edd] py-2.5 text-sm font-semibold tracking-wide text-white transition hover:bg-[#7b2cbf] disabled:opacity-60"
             >
               {loading ? "SIGNING IN..." : "SIGN IN"}
             </Button>
@@ -188,7 +219,7 @@ export default function SignIn() {
 
             <p className="pt-1 text-center text-sm text-white/80">
               Don&apos;t have an account?{" "}
-              <Link href="/auth/sign-up" className="font-medium text-[#ffd6b3] hover:text-[#ffcaa0]">
+              <Link href="/auth/sign-up" className="font-medium text-[#c77dff] hover:text-[#e0aaff]">
                 Sign up
               </Link>
             </p>

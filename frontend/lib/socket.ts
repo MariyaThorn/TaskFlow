@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3000"|| "http://26.72.254.233:3000";
@@ -116,4 +116,71 @@ export function useBoardPresence(boardId: string): string[] {
   }, [boardId]);
 
   return activeUserIds;
+}
+
+export interface CursorData {
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userColor: string;
+  x: number;
+  y: number;
+}
+
+export function useBoardCursors(boardId: string): { cursors: CursorData[]; emitCursor: (x: number, y: number) => void } {
+  const [cursors, setCursors] = useState<CursorData[]>([]);
+  const cursorsRef = useRef<Map<string, CursorData & { ts: number }>>(new Map());
+
+  useEffect(() => {
+    if (!boardId) return;
+
+    const socket = getSocket();
+
+    const onCursorMove = (data: CursorData) => {
+      cursorsRef.current.set(data.userId, { ...data, ts: Date.now() });
+      setCursors(Array.from(cursorsRef.current.values()));
+    };
+
+    socket.on("board:cursor-move", onCursorMove);
+
+    // Cleanup stale cursors every 3s
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      cursorsRef.current.forEach((v, k) => {
+        if (now - v.ts > 5000) {
+          cursorsRef.current.delete(k);
+          changed = true;
+        }
+      });
+      if (changed) setCursors(Array.from(cursorsRef.current.values()));
+    }, 3000);
+
+    return () => {
+      socket.off("board:cursor-move", onCursorMove);
+      clearInterval(interval);
+    };
+  }, [boardId]);
+
+  const emitCursor = useCallback((x: number, y: number) => {
+    const socket = getSocket();
+    let user: { id?: string; firstName?: string; lastName?: string; avatarColor?: string } = {};
+    try {
+      user = JSON.parse(localStorage.getItem("taskflow_user") || "{}");
+    } catch { /* ignore */ }
+    if (!user.id) return;
+
+    const initials = `${(user.firstName?.[0] || "").toUpperCase()}${(user.lastName?.[0] || "").toUpperCase()}` || "??";
+    socket.emit("cursor-move", {
+      boardId,
+      userId: user.id,
+      userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User",
+      userAvatar: initials,
+      userColor: user.avatarColor || "from-purple-500 to-purple-600",
+      x,
+      y,
+    });
+  }, [boardId]);
+
+  return { cursors, emitCursor };
 }

@@ -51,6 +51,15 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    settings: {
+      darkMode: { type: Boolean, default: false },
+      emailNotifications: { type: Boolean, default: true },
+      pushNotifications: { type: Boolean, default: true },
+      weeklyDigest: { type: Boolean, default: true },
+      language: { type: String, default: 'en' },
+      timezone: { type: String, default: 'UTC' },
+      profileVisibility: { type: String, enum: ['public', 'team', 'private'], default: 'team' },
+    },
   },
   { timestamps: true }
 );

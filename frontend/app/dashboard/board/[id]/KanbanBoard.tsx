@@ -8,10 +8,13 @@ import type { Card, Column, TeamMember, KanbanLabel } from "@/components/migrate
 interface KanbanBoardProps {
   columns: Column[];
   boardColor: string;
+  backgroundImage?: string;
   projectMembers: TeamMember[];
   onMoveCard: (cardId: string, sourceColumnId: string, targetColumnId: string) => void;
   onCardClick: (card: Card, columnId: string) => void;
   onAddCard: (columnId: string, data: { title: string; description?: string; dueDate?: string; labels?: KanbanLabel[]; assignee?: TeamMember }) => void;
+  onDeleteCard: (cardId: string) => void;
+  onUnassignCard?: (cardId: string) => void;
   onAddColumn: (title: string) => void;
   onRenameColumn: (columnId: string, title: string) => void;
   onDeleteColumn: (columnId: string) => void;
@@ -28,8 +31,8 @@ const bgTintMap: Record<string, string> = {
   "from-teal-500 to-teal-600": "bg-teal-50/60",
 };
 
-export default function KanbanBoard({ columns, boardColor, projectMembers, onMoveCard, onCardClick, onAddCard, onAddColumn, onRenameColumn, onDeleteColumn }: KanbanBoardProps) {
-  const boardBg = bgTintMap[boardColor] || "bg-gray-50";
+export default function KanbanBoard({ columns, boardColor, backgroundImage, projectMembers, onMoveCard, onCardClick, onAddCard, onDeleteCard, onUnassignCard, onAddColumn, onRenameColumn, onDeleteColumn }: KanbanBoardProps) {
+  const boardBg = backgroundImage ? "" : (bgTintMap[boardColor] || "bg-gray-50");
   const [addingColumn, setAddingColumn] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState("");
 
@@ -42,14 +45,26 @@ export default function KanbanBoard({ columns, boardColor, projectMembers, onMov
   };
 
   return (
-    <div className={`min-h-0 flex-1 overflow-x-auto overflow-y-hidden p-8 ${boardBg}`}>
-      <div className="flex h-full min-w-max gap-6">
+    <div
+      className={`kanban-scroll relative min-h-0 flex-1 overflow-x-auto overflow-y-hidden p-3 sm:p-6 lg:p-8 ${backgroundImage ? '' : boardBg}`}
+      style={backgroundImage ? {
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.35), rgba(255,255,255,0.35)), url(${backgroundImage})`,
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      } : undefined}
+    >
+      <div className="relative z-10 flex h-full min-w-max gap-3 sm:gap-6">
         {columns.map((column) => (
           <KanbanColumn
             key={column.id}
             column={column}
             onCardClick={onCardClick}
             onAddCard={onAddCard}
+            onDeleteCard={onDeleteCard}
+            onUnassignCard={onUnassignCard}
+            onDeleteColumn={onDeleteColumn}
+            onRenameColumn={onRenameColumn}
             members={projectMembers}
             boardColor={boardColor}
           />

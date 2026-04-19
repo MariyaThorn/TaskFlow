@@ -127,3 +127,34 @@
     @apply font-sans;
   }
 }
+
+/* Brand scrollbar */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: #ede0ff;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #5a189a;
+  border-radius: 8px;
+  border: 2px solid #ede0ff;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #3c096c;
+}
+*::-webkit-scrollbar-corner {
+  background: #ede0ff;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #5a189a #ede0ff;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5a189a #ede0ff;
+}

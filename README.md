@@ -127,8 +127,3 @@ Start the backend then open the URL above to explore API routes and example sche
 
 ---
 
-If you'd like, I can:
-- Add a sample `.env.local.example` and `.env.example` files in the repo.
-- Add a `README` section for deploying to production with `next start` and process managers (pm2/systemd), and secure settings for `JWT_SECRET` and `SESSION_SECRET`.
-
-Let me know which extras you want and I'll add them to the README.

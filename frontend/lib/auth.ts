@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+import { getApiUrl } from "@/lib/utils";
 
 export interface AuthUser {
   id: string;
@@ -50,7 +50,7 @@ export function isAuthenticated(): boolean {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const res = await fetch(`${getApiUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -72,7 +72,7 @@ export async function register(
   password: string,
   extra?: { firstName?: string; lastName?: string; username?: string; occupation?: string }
 ): Promise<AuthResponse> {
-  const res = await fetch(`${API_URL}/auth/register`, {
+  const res = await fetch(`${getApiUrl()}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -90,7 +90,7 @@ export async function register(
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, {
+  await fetch(`${getApiUrl()}/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
@@ -99,7 +99,7 @@ export async function logout(): Promise<void> {
 
 export async function fetchMe(): Promise<AuthUser> {
   const token = getToken();
-  const res = await fetch(`${API_URL}/auth/me`, {
+  const res = await fetch(`${getApiUrl()}/auth/me`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: "include",
   });

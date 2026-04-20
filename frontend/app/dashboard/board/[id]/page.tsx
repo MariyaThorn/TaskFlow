@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DragDropContext, type DropResult, type DragStart } from "@hello-pangea/dnd";
 import { useParams } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import CardDetailModal from "@/components/migrated/CardDetailModal";
 import LiveCursors from "@/components/migrated/LiveCursors";
-import { useBoardPresence, useBoardCursors } from "@/lib/socket";
+import { useBoardPresence, useBoardCursors, type DraggingCardInfo } from "@/lib/socket";
 import { useBoard } from "./useBoard";
 import BoardHeader from "./BoardHeader";
 import KanbanBoard from "./KanbanBoard";
@@ -41,11 +41,15 @@ export default function BoardPage() {
   const activeUserIds = useBoardPresence(boardId);
   const { cursors, emitCursor } = useBoardCursors(boardId);
   const cursorUserIds = cursors.map(c => c.userId);
+  const [draggingCardInfo, setDraggingCardInfo] = useState<DraggingCardInfo | undefined>();
 
   // Only track cursor when mouse is inside the board area
   const boardAreaRef = useRef<HTMLDivElement>(null);
 
   // Track mouse movement on the board and emit cursor position
+  const draggingCardRef = useRef<DraggingCardInfo | undefined>(undefined);
+  draggingCardRef.current = draggingCardInfo;
+
   useEffect(() => {
     let throttleTimer: ReturnType<typeof setTimeout> | null = null;
     const handleMouseMove = (e: MouseEvent) => {
@@ -55,7 +59,7 @@ export default function BoardPage() {
       }, 50);
       if (!boardAreaRef.current) return;
       const rect = boardAreaRef.current.getBoundingClientRect();
-      emitCursor(e.clientX - rect.left, e.clientY - rect.top);
+      emitCursor(e.clientX - rect.left, e.clientY - rect.top, draggingCardRef.current);
     };
     const el = boardAreaRef.current;
     el?.addEventListener("mousemove", handleMouseMove);
@@ -70,11 +74,28 @@ export default function BoardPage() {
     console.log("[BoardPage] currentUserId:", currentUserId, "activeUserIds:", activeUserIds);
   }
 
+  const onDragStart = useCallback((start: DragStart) => {
+    const cardId = start.draggableId;
+    for (const col of columns) {
+      const card = col.cards.find((c) => c.id === cardId);
+      if (card) {
+        setDraggingCardInfo({
+          title: card.title,
+          labels: card.labels.map((l) => ({ name: l.name, color: l.color })),
+          progress: card.progress,
+          assignee: card.assignee ? { name: card.assignee.name, avatar: card.assignee.avatar, color: card.assignee.color } : undefined,
+        });
+        break;
+      }
+    }
+  }, [columns]);
+
   const onDragEnd = useCallback((result: DropResult) => {
+    setDraggingCardInfo(undefined);
     const { draggableId, source, destination } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-    moveCard(draggableId, source.droppableId, destination.droppableId);
+    moveCard(draggableId, source.droppableId, destination.droppableId, source.index, destination.index);
   }, [moveCard]);
 
   const handleUnassignCard = useCallback((cardId: string) => {
@@ -89,7 +110,7 @@ export default function BoardPage() {
   }, [columns, handleCardUpdate]);
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="flex h-screen overflow-hidden bg-[#f8f0ff]">
         <Sidebar activeItem="Projects" />
 

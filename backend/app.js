@@ -24,10 +24,16 @@ connectDB();
 
 var app = express();
 
-// CORS — allow frontend origin
+// CORS — allow frontend origins (comma-separated in env)
+var allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3001')
+  .split(',')
+  .map(function (s) { return s.trim(); });
+
+console.log('[CORS] Allowed origins:', allowedOrigins);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: allowedOrigins,
     credentials: true,
   })
 );

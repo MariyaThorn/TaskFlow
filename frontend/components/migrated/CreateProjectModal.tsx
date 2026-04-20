@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X, UserPlus, Link2, Copy, Check, Search } from "lucide-react";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+import { getApiUrl } from "@/lib/utils";
 
 interface CreateProjectModalProps {
   onClose: () => void;
@@ -50,7 +50,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
     setCreating(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/projects`, {
+      const res = await fetch(`${getApiUrl()}/projects`, {
         method: "POST",
         headers: headers(),
         credentials: "include",
@@ -80,7 +80,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
     setInviteInput("");
 
     try {
-      const res = await fetch(`${API_URL}/projects/${projectId}/invite`, {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/invite`, {
         method: "POST",
         headers: headers(),
         credentials: "include",
@@ -107,7 +107,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
   const handleGenerateLink = async () => {
     setLoadingLink(true);
     try {
-      const res = await fetch(`${API_URL}/projects/${projectId}/invite-link`, {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/invite-link`, {
         headers: headers(),
         credentials: "include",
       });

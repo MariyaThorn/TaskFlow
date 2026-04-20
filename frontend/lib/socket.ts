@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3000"|| "http://26.72.254.233:3000";
+import { getBackendUrl } from "@/lib/utils";
 
 let globalSocket: Socket | null = null;
 
-function getSocket(): Socket {
+export function getSocket(): Socket {
   if (!globalSocket) {
-    globalSocket = io(SOCKET_URL, {
+    globalSocket = io(getBackendUrl(), {
       transports: ["websocket", "polling"],
       withCredentials: true,
     });
@@ -32,6 +32,8 @@ export interface BoardEvents {
   onColumnRenamed?: (data: any) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onColumnDeleted?: (data: any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onBackgroundChanged?: (data: any) => void;
 }
 
 export function useBoardSocket(boardId: string, events: BoardEvents) {
@@ -65,6 +67,7 @@ export function useBoardSocket(boardId: string, events: BoardEvents) {
     const onColumnAdded = (d: unknown) => eventsRef.current.onColumnAdded?.(d);
     const onColumnRenamed = (d: unknown) => eventsRef.current.onColumnRenamed?.(d);
     const onColumnDeleted = (d: unknown) => eventsRef.current.onColumnDeleted?.(d);
+    const onBackgroundChanged = (d: unknown) => eventsRef.current.onBackgroundChanged?.(d);
 
     socket.on("board:card-added", onCardAdded);
     socket.on("board:card-updated", onCardUpdated);
@@ -73,6 +76,7 @@ export function useBoardSocket(boardId: string, events: BoardEvents) {
     socket.on("board:column-added", onColumnAdded);
     socket.on("board:column-renamed", onColumnRenamed);
     socket.on("board:column-deleted", onColumnDeleted);
+    socket.on("board:background-changed", onBackgroundChanged);
 
     return () => {
       socket.off("board:card-added", onCardAdded);
@@ -82,6 +86,7 @@ export function useBoardSocket(boardId: string, events: BoardEvents) {
       socket.off("board:column-added", onColumnAdded);
       socket.off("board:column-renamed", onColumnRenamed);
       socket.off("board:column-deleted", onColumnDeleted);
+      socket.off("board:background-changed", onBackgroundChanged);
       socket.emit("leave-board", boardId);
     };
   }, [boardId]);
@@ -118,6 +123,13 @@ export function useBoardPresence(boardId: string): string[] {
   return activeUserIds;
 }
 
+export interface DraggingCardInfo {
+  title: string;
+  labels: { name: string; color: string }[];
+  progress: number;
+  assignee?: { name: string; avatar: string; color: string };
+}
+
 export interface CursorData {
   userId: string;
   userName: string;
@@ -125,9 +137,10 @@ export interface CursorData {
   userColor: string;
   x: number;
   y: number;
+  draggingCard?: DraggingCardInfo;
 }
 
-export function useBoardCursors(boardId: string): { cursors: CursorData[]; emitCursor: (x: number, y: number) => void } {
+export function useBoardCursors(boardId: string): { cursors: CursorData[]; emitCursor: (x: number, y: number, draggingCard?: DraggingCardInfo) => void } {
   const [cursors, setCursors] = useState<CursorData[]>([]);
   const cursorsRef = useRef<Map<string, CursorData & { ts: number }>>(new Map());
 
@@ -162,7 +175,7 @@ export function useBoardCursors(boardId: string): { cursors: CursorData[]; emitC
     };
   }, [boardId]);
 
-  const emitCursor = useCallback((x: number, y: number) => {
+  const emitCursor = useCallback((x: number, y: number, draggingCard?: DraggingCardInfo) => {
     const socket = getSocket();
     let user: { id?: string; firstName?: string; lastName?: string; avatarColor?: string } = {};
     try {
@@ -179,6 +192,7 @@ export function useBoardCursors(boardId: string): { cursors: CursorData[]; emitC
       userColor: user.avatarColor || "from-purple-500 to-purple-600",
       x,
       y,
+      ...(draggingCard ? { draggingCard } : {}),
     });
   }, [boardId]);
 

@@ -50,6 +50,6 @@ export interface ProjectMember {
   email: string;
   avatar: string;
   color: string;
-  role: "admin" | "member";
+  role: "owner" | "admin" | "member";
   status: "active" | "pending";
 }

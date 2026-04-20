@@ -130,6 +130,11 @@ router.put('/:id', async (req, res) => {
     if (backgroundImage !== undefined) board.backgroundImage = backgroundImage;
 
     await board.save();
+
+    if (backgroundImage !== undefined) {
+      getIO()?.to(`board:${req.params.id}`).emit('board:background-changed', { boardId: req.params.id, backgroundImage: board.backgroundImage });
+    }
+
     res.json({ board });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -166,6 +171,8 @@ router.post('/:id/background', upload.single('file'), async (req, res) => {
     const url = `/uploads/${req.file.filename}`;
     board.backgroundImage = url;
     await board.save();
+
+    getIO()?.to(`board:${req.params.id}`).emit('board:background-changed', { boardId: req.params.id, backgroundImage: url });
 
     res.json({ url });
   } catch (err) {
@@ -319,7 +326,7 @@ router.post('/:id/cards/:cardId/move', async (req, res) => {
     const project = await requireProjectMember(req, res, board.project);
     if (!project) return;
 
-    const { targetColumnId } = req.body;
+    const { targetColumnId, targetIndex } = req.body;
     if (!targetColumnId) {
       return res.status(400).json({ message: 'targetColumnId is required' });
     }
@@ -342,7 +349,11 @@ router.post('/:id/cards/:cardId/move', async (req, res) => {
     const targetColumn = board.columns.id(targetColumnId);
     if (!targetColumn) return res.status(404).json({ message: 'Target column not found' });
 
-    targetColumn.cards.push(cardData);
+    if (targetIndex !== undefined && targetIndex >= 0 && targetIndex <= targetColumn.cards.length) {
+      targetColumn.cards.splice(targetIndex, 0, cardData);
+    } else {
+      targetColumn.cards.push(cardData);
+    }
     board.markModified('columns');
     await board.save();
     getIO()?.to(`board:${req.params.id}`).emit('board:card-moved', { boardId: req.params.id, cardId: req.params.cardId, sourceColumnId, targetColumnId });

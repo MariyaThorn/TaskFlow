@@ -14,7 +14,7 @@ type NavbarProps = {
   onInvitationAccepted?: () => void;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+import { getApiUrl } from "@/lib/utils";
 
 export default function Navbar({
   title,
@@ -44,7 +44,7 @@ export default function Navbar({
     // Refresh user data from server to pick up backfilled avatarColor
     const token = getToken();
     if (token) {
-      fetch(`${API_URL}/auth/me`, {
+      fetch(`${getApiUrl()}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -64,7 +64,7 @@ export default function Navbar({
 
     // fetch pending invitations for this user
     if (token) {
-      fetch(`${API_URL}/projects/my-invitations`, {
+      fetch(`${getApiUrl()}/projects/my-invitations`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: 'include',
       })
@@ -74,7 +74,59 @@ export default function Navbar({
         })
         .catch(() => {});
     }
-  }, []);
+
+    // Listen for real-time invitation events
+    const onNewInvitation = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        setNotifications((prev) => {
+          // Avoid duplicates
+          if (prev.some((n: { invitationId: string }) => n.invitationId === detail.invitationId)) return prev;
+          return [...prev, detail];
+        });
+      }
+    };
+    const onInvitationAcceptedEvent = () => {
+      // Refetch invitations to stay in sync
+      const t = getToken();
+      if (t) {
+        fetch(`${getApiUrl()}/projects/my-invitations`, {
+          headers: { Authorization: `Bearer ${t}` },
+          credentials: 'include',
+        })
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => {
+            if (data?.invitations) setNotifications(data.invitations);
+          })
+          .catch(() => {});
+      }
+      onInvitationAccepted?.();
+    };
+    const onInvitationDeclinedEvent = () => {
+      const t = getToken();
+      if (t) {
+        fetch(`${getApiUrl()}/projects/my-invitations`, {
+          headers: { Authorization: `Bearer ${t}` },
+          credentials: 'include',
+        })
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => {
+            if (data?.invitations) setNotifications(data.invitations);
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener("taskflow:invitation", onNewInvitation);
+    window.addEventListener("taskflow:invitation-accepted", onInvitationAcceptedEvent);
+    window.addEventListener("taskflow:invitation-declined", onInvitationDeclinedEvent);
+
+    return () => {
+      window.removeEventListener("taskflow:invitation", onNewInvitation);
+      window.removeEventListener("taskflow:invitation-accepted", onInvitationAcceptedEvent);
+      window.removeEventListener("taskflow:invitation-declined", onInvitationDeclinedEvent);
+    };
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <header className="flex h-16 items-center gap-3 border-b border-[#e0aaff]/30 bg-[#ede0ff] px-4 pl-14 sm:gap-6 sm:px-8 md:pl-8">
@@ -132,7 +184,7 @@ export default function Navbar({
                               const token = getToken();
                               if (!token) return;
                               try {
-                                const res = await fetch(`${API_URL}/projects/${n.projectId}/invitations/${n.invitationId}/accept`, {
+                                const res = await fetch(`${getApiUrl()}/projects/${n.projectId}/invitations/${n.invitationId}/accept`, {
                                   method: 'POST',
                                   headers: { Authorization: `Bearer ${token}` },
                                   credentials: 'include',
@@ -152,7 +204,7 @@ export default function Navbar({
                               const token = getToken();
                               if (!token) return;
                               try {
-                                const res = await fetch(`${API_URL}/projects/${n.projectId}/invitations/${n.invitationId}/decline`, {
+                                const res = await fetch(`${getApiUrl()}/projects/${n.projectId}/invitations/${n.invitationId}/decline`, {
                                   method: 'POST',
                                   headers: { Authorization: `Bearer ${token}` },
                                   credentials: 'include',

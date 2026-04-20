@@ -6,9 +6,7 @@ import { useRouter } from "next/navigation";
 import type { TeamMember } from "@/components/migrated/types";
 import { getToken } from "@/lib/auth";
 import UserAvatar from "@/components/migrated/UserAvatar";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const BACKEND_URL = API_URL?.replace("/api", "") || "http://localhost:3000";
+import { getApiUrl, getBackendUrl } from "@/lib/utils";
 
 const PRESET_BACKGROUNDS = [
   "/back-ground-theme/1.png",
@@ -79,10 +77,10 @@ export default function BoardHeader({ projectName, boardName, projectId, boardId
   const saveBg = async (url: string) => {
     onBackgroundChange?.(url);
     // Store relative path in DB (strip BACKEND_URL prefix if present)
-    const dbUrl = url.startsWith(BACKEND_URL) ? url.slice(BACKEND_URL.length) : url;
+    const dbUrl = url.startsWith(getBackendUrl()) ? url.slice(getBackendUrl().length) : url;
     try {
       const token = getToken();
-      await fetch(`${API_URL}/boards/${boardId}`, {
+      await fetch(`${getApiUrl()}/boards/${boardId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         credentials: "include",
@@ -101,7 +99,7 @@ export default function BoardHeader({ projectName, boardName, projectId, boardId
       const token = getToken();
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(`${API_URL}/boards/${boardId}/background`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}/background`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
@@ -109,7 +107,7 @@ export default function BoardHeader({ projectName, boardName, projectId, boardId
       });
       if (res.ok) {
         const data = await res.json();
-        saveBg(data.url.startsWith("/uploads/") ? `${BACKEND_URL}${data.url}` : data.url);
+        saveBg(data.url.startsWith("/uploads/") ? `${getBackendUrl()}${data.url}` : data.url);
       }
     } catch {
       // silent

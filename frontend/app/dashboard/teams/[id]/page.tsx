@@ -15,8 +15,7 @@ import {
 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import { getToken } from "@/lib/auth";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { getApiUrl } from "@/lib/utils";
 
 interface TeamMember {
   memberId: string;
@@ -82,7 +81,7 @@ export default function TeamDetailPage() {
 
   const fetchTeam = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}`, { headers: headers(), credentials: "include" });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}`, { headers: headers(), credentials: "include" });
       if (!res.ok) return;
       const data = await res.json();
       const t = data.team;
@@ -114,7 +113,7 @@ export default function TeamDetailPage() {
 
   const fetchImportable = async () => {
     try {
-      const res = await fetch(`${API_URL}/projects`, { headers: headers(), credentials: "include" });
+      const res = await fetch(`${getApiUrl()}/projects`, { headers: headers(), credentials: "include" });
       if (!res.ok) return;
       const data = await res.json();
       const teamProjectIds = projects.map((p) => p.id);
@@ -128,7 +127,7 @@ export default function TeamDetailPage() {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}/members`, { method: "POST", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ emailOrUsername: inviteEmail.trim(), role: inviteRole }) });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}/members`, { method: "POST", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ emailOrUsername: inviteEmail.trim(), role: inviteRole }) });
       const data = await res.json();
       if (!res.ok) { showMsg("error", data.message || "Failed to invite"); return; }
       setInviteEmail(""); setShowInviteForm(false); showMsg("success", "Member added!"); fetchTeam();
@@ -137,7 +136,7 @@ export default function TeamDetailPage() {
 
   const handleRemoveMember = async (memberId: string) => {
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}/members/${memberId}`, { method: "DELETE", headers: headers(), credentials: "include" });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}/members/${memberId}`, { method: "DELETE", headers: headers(), credentials: "include" });
       if (!res.ok) { const data = await res.json(); showMsg("error", data.message || "Failed to remove"); return; }
       fetchTeam();
     } catch { showMsg("error", "Failed to remove member"); }
@@ -146,7 +145,7 @@ export default function TeamDetailPage() {
   const handleChangeRole = async (memberId: string, currentRole: string) => {
     const newRole = currentRole === "admin" ? "member" : "admin";
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}/members/${memberId}/role`, { method: "PUT", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ role: newRole }) });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}/members/${memberId}/role`, { method: "PUT", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ role: newRole }) });
       if (!res.ok) { const data = await res.json(); showMsg("error", data.message || "Failed to update role"); return; }
       fetchTeam();
     } catch { showMsg("error", "Failed to change role"); }
@@ -155,7 +154,7 @@ export default function TeamDetailPage() {
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}/projects`, { method: "POST", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ name: newProjectName.trim() }) });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}/projects`, { method: "POST", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ name: newProjectName.trim() }) });
       if (!res.ok) { const data = await res.json(); showMsg("error", data.message || "Failed to create project"); return; }
       setNewProjectName(""); setShowNewProject(false); showMsg("success", "Project created!"); fetchTeam();
     } catch { showMsg("error", "Failed to create project"); }
@@ -163,7 +162,7 @@ export default function TeamDetailPage() {
 
   const handleImportProject = async (projectId: string) => {
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}/projects`, { method: "POST", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ projectId }) });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}/projects`, { method: "POST", headers: { "Content-Type": "application/json", ...headers() }, credentials: "include", body: JSON.stringify({ projectId }) });
       if (!res.ok) { const data = await res.json(); showMsg("error", data.message || "Failed to import"); return; }
       setShowImport(false); showMsg("success", "Project imported!"); fetchTeam();
     } catch { showMsg("error", "Failed to import project"); }
@@ -171,7 +170,7 @@ export default function TeamDetailPage() {
 
   const handleRemoveProject = async (projectId: string) => {
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}/projects/${projectId}`, { method: "DELETE", headers: headers(), credentials: "include" });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}/projects/${projectId}`, { method: "DELETE", headers: headers(), credentials: "include" });
       if (!res.ok) { const data = await res.json(); showMsg("error", data.message || "Failed to remove project"); return; }
       fetchTeam();
     } catch { showMsg("error", "Failed to remove project"); }
@@ -179,7 +178,7 @@ export default function TeamDetailPage() {
 
   const handleDeleteTeam = async () => {
     try {
-      const res = await fetch(`${API_URL}/teams/${teamId}`, { method: "DELETE", headers: headers(), credentials: "include" });
+      const res = await fetch(`${getApiUrl()}/teams/${teamId}`, { method: "DELETE", headers: headers(), credentials: "include" });
       if (!res.ok) { const data = await res.json(); showMsg("error", data.message || "Failed to delete team"); return; }
       router.push("/dashboard/teams");
     } catch { showMsg("error", "Failed to delete team"); }

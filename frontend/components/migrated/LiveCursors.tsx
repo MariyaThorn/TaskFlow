@@ -21,6 +21,19 @@ function gradientToColor(color: string): string {
   return "#5a189a";
 }
 
+// Map Tailwind bg classes to CSS colors for labels
+function labelBgToColor(bg: string): string {
+  if (bg.includes("red")) return "#ef4444";
+  if (bg.includes("orange")) return "#f97316";
+  if (bg.includes("yellow")) return "#eab308";
+  if (bg.includes("green")) return "#22c55e";
+  if (bg.includes("blue")) return "#3b82f6";
+  if (bg.includes("purple")) return "#a855f7";
+  if (bg.includes("pink")) return "#ec4899";
+  if (bg.includes("indigo")) return "#6366f1";
+  return "#8b5cf6";
+}
+
 export default function LiveCursors({ cursors }: LiveCursorsProps) {
   if (cursors.length === 0) return null;
 
@@ -28,6 +41,7 @@ export default function LiveCursors({ cursors }: LiveCursorsProps) {
     <div className="pointer-events-none absolute inset-0 z-[100] overflow-hidden">
       {cursors.map((cursor) => {
         const cursorColor = gradientToColor(cursor.userColor);
+        const dragging = cursor.draggingCard;
         return (
           <div
             key={cursor.userId}
@@ -56,6 +70,61 @@ export default function LiveCursors({ cursors }: LiveCursorsProps) {
             >
               {cursor.userName}
             </div>
+            {/* Dragging card preview */}
+            {dragging && (
+              <div
+                className="ml-3 mt-2 w-48 overflow-hidden rounded-xl border border-white/40 bg-white shadow-2xl"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
+              >
+                {/* Colored top accent */}
+                <div className="h-1" style={{ backgroundColor: cursorColor }} />
+                <div className="p-2.5">
+                  {/* Labels */}
+                  {dragging.labels.length > 0 && (
+                    <div className="mb-1.5 flex flex-wrap gap-1">
+                      {dragging.labels.slice(0, 3).map((label, i) => (
+                        <span
+                          key={i}
+                          className="rounded px-1.5 py-0.5 text-[8px] font-semibold text-white"
+                          style={{ backgroundColor: labelBgToColor(label.color) }}
+                        >
+                          {label.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Title */}
+                  <p className="mb-1.5 truncate text-xs font-semibold text-gray-900">
+                    {dragging.title}
+                  </p>
+                  {/* Progress bar */}
+                  <div className="mb-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] text-gray-400">Progress</span>
+                      <span className="text-[8px] font-bold text-gray-500">{dragging.progress}%</span>
+                    </div>
+                    <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${dragging.progress}%`, backgroundColor: cursorColor }}
+                      />
+                    </div>
+                  </div>
+                  {/* Assignee */}
+                  {dragging.assignee && (
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="flex h-4 w-4 items-center justify-center rounded-full text-[7px] font-bold text-white"
+                        style={{ backgroundColor: gradientToColor(dragging.assignee.color) }}
+                      >
+                        {dragging.assignee.avatar}
+                      </div>
+                      <span className="truncate text-[9px] text-gray-500">{dragging.assignee.name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}

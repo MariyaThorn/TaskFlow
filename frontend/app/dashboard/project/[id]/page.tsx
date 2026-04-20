@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Plus, UserPlus, Clock, ArrowLeft, Trash2, Palette, Upload, X } from "lucide-react";
+import { Plus, UserPlus, Clock, ArrowLeft, Trash2, Palette, Upload, X, UserMinus, LogOut, Crown, CheckCircle, AlertCircle } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import CreateBoardModal from "@/components/migrated/CreateBoardModal";
 import InviteMemberModal from "@/components/migrated/InviteMemberModal";
 import UserAvatar from "@/components/migrated/UserAvatar";
 import type { ProjectMember } from "@/components/migrated/types";
-import { getToken } from "@/lib/auth";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
-const BACKEND_URL = API_URL?.replace("/api", "") || "http://localhost:3000";
+import { getToken, getUser } from "@/lib/auth";
+import { getApiUrl, getBackendUrl } from "@/lib/utils";
 
 interface Board {
   id: string;
@@ -37,6 +35,10 @@ export default function ProjectWorkspacePage() {
   const [projectColor, setProjectColor] = useState("from-purple-500 to-purple-600");
   const [projectBackgroundImage, setProjectBackgroundImage] = useState<string | undefined>();
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [myRole, setMyRole] = useState<"owner" | "admin" | "member">("member");
+  const [confirmKickMember, setConfirmKickMember] = useState<ProjectMember | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   const colorOptions = [
     "from-purple-500 to-purple-600",
@@ -58,6 +60,11 @@ export default function ProjectWorkspacePage() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
+  const showMsg = (type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 4000);
+  };
+
   const fallbackColors = [
     "from-blue-500 to-blue-600",
     "from-green-500 to-green-600",
@@ -69,7 +76,7 @@ export default function ProjectWorkspacePage() {
 
   const fetchProject = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/projects/${projectId}`, {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}`, {
         headers: headers(),
         credentials: "include",
       });
@@ -78,7 +85,7 @@ export default function ProjectWorkspacePage() {
       const p = data.project;
       setProjectName(p.name);
       if (p.color) setProjectColor(p.color);
-      if (p.backgroundImage) setProjectBackgroundImage(`${BACKEND_URL}${p.backgroundImage}`);
+      if (p.backgroundImage) setProjectBackgroundImage(`${getBackendUrl()}${p.backgroundImage}`);
 
       const members: ProjectMember[] = p.members.map(
         (m: { user: { _id: string; firstName: string; lastName: string; email: string; avatarColor?: string; profileImage?: string }; role: string }, i: number) => ({
@@ -87,23 +94,30 @@ export default function ProjectWorkspacePage() {
           email: m.user.email,
           avatar: `${(m.user.firstName?.[0] || "").toUpperCase()}${(m.user.lastName?.[0] || "").toUpperCase()}` || m.user.email.substring(0, 2).toUpperCase(),
           color: m.user.avatarColor || fallbackColors[i % fallbackColors.length],
-          role: m.role === "owner" ? "admin" : m.role as "admin" | "member",
+          role: m.role as "owner" | "admin" | "member",
           status: "active" as const,
         })
       );
+
+      // Determine current user's role
+      const currentUser = getUser();
+      if (currentUser?.id) {
+        const me = members.find((m) => m.id === currentUser.id);
+        if (me) setMyRole(me.role);
+      }
 
       // Add pending invitations as members
       if (p.invitations) {
         p.invitations
           .filter((inv: { status: string }) => inv.status === "pending")
-          .forEach((inv: { email: string; role: string }, i: number) => {
+          .forEach((inv: { _id: string; email: string; role: string }, i: number) => {
             members.push({
-              id: `inv-${i}`,
+              id: inv._id,
               name: inv.email.split("@")[0],
               email: inv.email,
               avatar: inv.email.substring(0, 2).toUpperCase(),
               color: fallbackColors[(members.length + i) % fallbackColors.length],
-              role: inv.role as "admin" | "member",
+              role: inv.role as "owner" | "admin" | "member",
               status: "pending",
             });
           });
@@ -122,7 +136,7 @@ export default function ProjectWorkspacePage() {
 
   const fetchBoards = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/boards/project/${projectId}`, {
+      const res = await fetch(`${getApiUrl()}/boards/project/${projectId}`, {
         headers: headers(),
         credentials: "include",
       });
@@ -151,7 +165,7 @@ export default function ProjectWorkspacePage() {
 
   const handleCreateBoard = async (newBoard: { name: string; description: string; color: string; backgroundImage?: string }) => {
     try {
-      const res = await fetch(`${API_URL}/boards`, {
+      const res = await fetch(`${getApiUrl()}/boards`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -159,56 +173,56 @@ export default function ProjectWorkspacePage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        window.alert(data.message || "Failed to create board");
+        showMsg("error", data.message || "Failed to create board");
         return;
       }
       fetchBoards();
     } catch {
-      window.alert("Failed to create board");
+      showMsg("error", "Failed to create board");
     }
   };
 
   const handleDeleteProject = async () => {
     try {
-      const res = await fetch(`${API_URL}/projects/${projectId}`, {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}`, {
         method: "DELETE",
         headers: headers(),
         credentials: "include",
       });
       if (!res.ok) {
         const data = await res.json();
-        window.alert(data.message || "Failed to delete project");
+        showMsg("error", data.message || "Failed to delete project");
         return;
       }
       router.push("/dashboard");
     } catch {
-      window.alert("Failed to delete project");
+      showMsg("error", "Failed to delete project");
     }
   };
 
   const handleDeleteBoard = async (boardId: string) => {
     try {
-      const res = await fetch(`${API_URL}/boards/${boardId}`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}`, {
         method: "DELETE",
         headers: headers(),
         credentials: "include",
       });
       if (!res.ok) {
         const data = await res.json();
-        window.alert(data.message || "Failed to delete board");
+        showMsg("error", data.message || "Failed to delete board");
         return;
       }
       setDeletingBoardId(null);
       fetchBoards();
     } catch {
-      window.alert("Failed to delete board");
+      showMsg("error", "Failed to delete board");
     }
   };
 
   const handleInviteMember = async (newMember: { email: string; role: "admin" | "member" }) => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/projects/${projectId}/invite`, {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/invite`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -219,12 +233,70 @@ export default function ProjectWorkspacePage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        window.alert(data.message || "Failed to invite");
+        showMsg("error", data.message || "Failed to invite");
         return;
       }
+      showMsg("success", "Invitation sent!");
       fetchProject();
     } catch {
-      window.alert("Failed to invite member");
+      showMsg("error", "Failed to invite member");
+    }
+  };
+
+  const handleKickMember = async (member: ProjectMember) => {
+    try {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/members/${member.id}`, {
+        method: "DELETE",
+        headers: headers(),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showMsg("error", data.message || "Failed to remove member");
+        return;
+      }
+      showMsg("success", `${member.name} has been removed`);
+      setConfirmKickMember(null);
+      fetchProject();
+    } catch {
+      showMsg("error", "Failed to remove member");
+    }
+  };
+
+  const handleCancelInvitation = async (member: ProjectMember) => {
+    try {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/invitations/${member.id}`, {
+        method: "DELETE",
+        headers: headers(),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showMsg("error", data.message || "Failed to cancel invitation");
+        return;
+      }
+      showMsg("success", "Invitation cancelled");
+      fetchProject();
+    } catch {
+      showMsg("error", "Failed to cancel invitation");
+    }
+  };
+
+  const handleLeaveProject = async () => {
+    try {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/leave`, {
+        method: "POST",
+        headers: headers(),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showMsg("error", data.message || "Failed to leave project");
+        return;
+      }
+      router.push("/dashboard");
+    } catch {
+      showMsg("error", "Failed to leave project");
     }
   };
 
@@ -233,7 +305,7 @@ export default function ProjectWorkspacePage() {
     setProjectBackgroundImage(undefined);
     setShowColorPicker(false);
     try {
-      await fetch(`${API_URL}/projects/${projectId}/appearance`, {
+      await fetch(`${getApiUrl()}/projects/${projectId}/appearance`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -250,7 +322,7 @@ export default function ProjectWorkspacePage() {
     const formData = new FormData();
     formData.append("background", file);
     try {
-      const res = await fetch(`${API_URL}/projects/${projectId}/background`, {
+      const res = await fetch(`${getApiUrl()}/projects/${projectId}/background`, {
         method: "POST",
         headers: headers(),
         credentials: "include",
@@ -258,7 +330,7 @@ export default function ProjectWorkspacePage() {
       });
       if (!res.ok) return;
       const data = await res.json();
-      setProjectBackgroundImage(`${BACKEND_URL}${data.backgroundImage}`);
+      setProjectBackgroundImage(`${getBackendUrl()}${data.backgroundImage}`);
       setShowColorPicker(false);
     } catch {
       // ignore
@@ -269,7 +341,7 @@ export default function ProjectWorkspacePage() {
     setProjectBackgroundImage(undefined);
     setShowColorPicker(false);
     try {
-      await fetch(`${API_URL}/projects/${projectId}/appearance`, {
+      await fetch(`${getApiUrl()}/projects/${projectId}/appearance`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -286,7 +358,7 @@ export default function ProjectWorkspacePage() {
 
       <div className="flex flex-1 flex-col">
         {/* Project header bar */}
-        <header className="relative z-20 border-b border-[#e0aaff]/30">
+        <header className="sticky top-0 z-20 border-b border-[#e0aaff]/30">
           {/* Colored background band */}
           {projectBackgroundImage ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -346,13 +418,23 @@ export default function ProjectWorkspacePage() {
                 </div>
               )}
             </div>
-            <button
-              onClick={() => setConfirmDeleteProject(true)}
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-              title="Delete project"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {myRole === "owner" ? (
+              <button
+                onClick={() => setConfirmDeleteProject(true)}
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                title="Delete project"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setConfirmLeave(true)}
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                title="Leave project"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
@@ -406,6 +488,15 @@ export default function ProjectWorkspacePage() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+
+          {/* Toast message */}
+          {message && (
+            <div className={`mb-6 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-sm ${message.type === "success" ? "bg-green-50 text-green-700 ring-1 ring-green-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
+              {message.type === "success" ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+              {message.text}
+              <button onClick={() => setMessage(null)} className="ml-auto rounded-lg p-0.5 hover:bg-black/5"><X className="h-3.5 w-3.5" /></button>
+            </div>
+          )}
 
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Boards</h2>
@@ -479,9 +570,12 @@ export default function ProjectWorkspacePage() {
       {showInviteModal && (
         <InviteMemberModal
           onClose={() => setShowInviteModal(false)}
-          onInvite={handleInviteMember}
+          onInvite={() => fetchProject()}
           currentMembers={projectMembers}
           projectId={projectId}
+          myRole={myRole}
+          onKick={() => fetchProject()}
+          onCancelInvitation={() => fetchProject()}
         />
       )}
 
@@ -512,6 +606,44 @@ export default function ProjectWorkspacePage() {
             <div className="flex justify-end gap-3">
               <button onClick={() => setDeletingBoardId(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
               <button onClick={() => handleDeleteBoard(deletingBoardId)} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kick Member Confirmation */}
+      {confirmKickMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setConfirmKickMember(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <UserMinus className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Remove Member</h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Are you sure you want to remove <strong>{confirmKickMember.name}</strong> from this project? They will lose access to all boards.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmKickMember(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
+              <button onClick={() => handleKickMember(confirmKickMember)} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leave Project Confirmation */}
+      {confirmLeave && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setConfirmLeave(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+              <LogOut className="h-6 w-6 text-amber-600" />
+            </div>
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Leave Project</h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Are you sure you want to leave <strong>{projectName}</strong>? You will lose access to all boards in this project.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmLeave(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
+              <button onClick={handleLeaveProject} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Leave</button>
             </div>
           </div>
         </div>

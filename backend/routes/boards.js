@@ -152,6 +152,27 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /api/boards/:id/background — upload a custom background image
+router.post('/:id/background', upload.single('file'), async (req, res) => {
+  try {
+    const board = await Board.findById(req.params.id);
+    if (!board) return res.status(404).json({ message: 'Board not found' });
+
+    const project = await requireProjectMember(req, res, board.project);
+    if (!project) return;
+
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const url = `/uploads/${req.file.filename}`;
+    board.backgroundImage = url;
+    await board.save();
+
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // POST /api/boards/:id/cards — add a card to a column
 router.post('/:id/cards', async (req, res) => {
   try {

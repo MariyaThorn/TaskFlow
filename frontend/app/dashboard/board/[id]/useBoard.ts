@@ -6,6 +6,7 @@ import { getToken } from "@/lib/auth";
 import { useBoardSocket } from "@/lib/socket";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+const BACKEND_URL = API_URL?.replace("/api", "") || "http://localhost:3000";
 
 const fallbackColors = [
   "from-blue-500 to-blue-600",
@@ -19,6 +20,7 @@ const fallbackColors = [
 export function useBoard(boardId: string) {
   const [boardName, setBoardName] = useState("Board");
   const [boardColor, setBoardColor] = useState("from-blue-500 to-blue-600");
+  const [boardBackgroundImage, setBoardBackgroundImage] = useState("");
   const [projectId, setProjectId] = useState("");
   const [projectName, setProjectName] = useState("");
   const [columns, setColumns] = useState<Column[]>([]);
@@ -45,6 +47,8 @@ export function useBoard(boardId: string) {
       const b = data.board;
       setBoardName(b.name);
       setBoardColor(b.color || "from-blue-500 to-blue-600");
+      const bgImg = b.backgroundImage || "";
+      setBoardBackgroundImage(bgImg.startsWith("/uploads/") ? `${BACKEND_URL}${bgImg}` : bgImg);
       setProjectId(typeof b.project === "string" ? b.project : b.project?._id || "");
       if (data.project?.name) setProjectName(data.project.name);
 
@@ -269,6 +273,8 @@ export function useBoard(boardId: string) {
   return {
     boardName,
     boardColor,
+    boardBackgroundImage,
+    setBoardBackgroundImage,
     projectId,
     projectName,
     columns,

@@ -79,7 +79,7 @@ export default function AddCardModal({ onClose, onAdd, members }: AddCardModalPr
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter card title..."
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               required
               autoFocus
             />
@@ -88,7 +88,7 @@ export default function AddCardModal({ onClose, onAdd, members }: AddCardModalPr
           <button
             type="button"
             onClick={() => setShowMore(!showMore)}
-            className="flex items-center gap-1 text-sm font-medium text-[#4F46E5] hover:text-[#4338CA]"
+            className="flex items-center gap-1 text-sm font-medium text-[#5a189a] hover:text-[#3c096c]"
           >
             {showMore ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {showMore ? "Less options" : "More options (description, due date, labels)"}
@@ -105,7 +105,7 @@ export default function AddCardModal({ onClose, onAdd, members }: AddCardModalPr
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Add a description..."
                   rows={3}
-                  className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                  className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                 />
               </div>
 
@@ -117,7 +117,7 @@ export default function AddCardModal({ onClose, onAdd, members }: AddCardModalPr
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                 />
               </div>
 
@@ -143,14 +143,14 @@ export default function AddCardModal({ onClose, onAdd, members }: AddCardModalPr
                     value={newLabelName}
                     onChange={(e) => setNewLabelName(e.target.value)}
                     placeholder="Label name..."
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddLabel(); } }}
                   />
                   <button
                     type="button"
                     onClick={handleAddLabel}
                     disabled={!newLabelName.trim()}
-                    className="rounded-lg bg-[#4F46E5] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4338CA] disabled:opacity-50"
+                    className="rounded-lg bg-[#5a189a] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#3c096c] disabled:opacity-50"
                   >
                     Add
                   </button>
@@ -225,7 +225,7 @@ export default function AddCardModal({ onClose, onAdd, members }: AddCardModalPr
             <button
               type="submit"
               disabled={!title.trim()}
-              className="flex-1 rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-xl bg-[#5a189a] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#3c096c] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Add Card
             </button>

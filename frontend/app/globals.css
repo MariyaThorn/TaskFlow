@@ -127,3 +127,47 @@
     @apply font-sans;
   }
 }
+
+/* Brand scrollbar */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: #ede0ff;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #5a189a;
+  border-radius: 8px;
+  border: 2px solid #ede0ff;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #3c096c;
+}
+*::-webkit-scrollbar-corner {
+  background: #ede0ff;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #5a189a #ede0ff;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5a189a #ede0ff;
+}
+
+/* ── Board presence: avatar animations ── */
+@keyframes avatar-pop-in {
+  0%   { transform: scale(0);   opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+@keyframes avatar-pop-out {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+.animate-avatar-pop-in  { animation: avatar-pop-in  0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-avatar-pop-out { animation: avatar-pop-out 0.3s ease-in forwards; }

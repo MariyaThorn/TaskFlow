@@ -15,6 +15,23 @@ const invitationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const PROJECT_COLORS = [
+  'from-purple-500 to-purple-600',
+  'from-blue-500 to-blue-600',
+  'from-green-500 to-green-600',
+  'from-pink-500 to-pink-600',
+  'from-orange-500 to-orange-600',
+  'from-teal-500 to-teal-600',
+  'from-red-500 to-red-600',
+  'from-indigo-500 to-indigo-600',
+  'from-cyan-500 to-cyan-600',
+  'from-rose-500 to-rose-600',
+];
+
+function randomProjectColor() {
+  return PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)];
+}
+
 const projectSchema = new mongoose.Schema(
   {
     name: {
@@ -22,6 +39,15 @@ const projectSchema = new mongoose.Schema(
       required: [true, 'Project name is required'],
       trim: true,
     },
+    color: {
+      type: String,
+      default: '',
+    },
+    backgroundImage: {
+      type: String,
+      default: '',
+    },
+    team: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
     members: [memberSchema],
     invitations: [invitationSchema],
     inviteCode: {
@@ -36,4 +62,6 @@ const projectSchema = new mongoose.Schema(
 // Index for fast invite-code lookups
 projectSchema.index({ inviteCode: 1 });
 
-module.exports = mongoose.model('Project', projectSchema);
+const ProjectModel = mongoose.model('Project', projectSchema);
+ProjectModel.randomColor = randomProjectColor;
+module.exports = ProjectModel;

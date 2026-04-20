@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { X, Mail, UserPlus, Crown, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Mail, UserPlus, Crown, User, Link2, Check, Copy } from "lucide-react";
+import { getToken } from "@/lib/auth";
 import type { ProjectMember } from "@/components/migrated/types";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface InviteMemberModalProps {
   onClose: () => void;
@@ -11,15 +14,47 @@ interface InviteMemberModalProps {
     role: "admin" | "member";
   }) => void;
   currentMembers: ProjectMember[];
+  projectId: string;
 }
 
 export default function InviteMemberModal({
   onClose,
   onInvite,
   currentMembers,
+  projectId,
 }: InviteMemberModalProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
+  const [inviteLink, setInviteLink] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [loadingLink, setLoadingLink] = useState(false);
+
+  useEffect(() => {
+    const fetchInviteLink = async () => {
+      setLoadingLink(true);
+      try {
+        const res = await fetch(`${API_URL}/projects/${projectId}/invite-link`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setInviteLink(data.inviteUrl);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoadingLink(false);
+      }
+    };
+    fetchInviteLink();
+  }, [projectId]);
+
+  const handleCopyLink = async () => {
+    if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +71,10 @@ export default function InviteMemberModal({
         className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-gray-200 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Invite Member to Project</h2>
+              <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">Invite Member to Project</h2>
               <p className="mt-1 text-sm text-gray-600">Add new members to collaborate on this project</p>
             </div>
             <button onClick={onClose} className="rounded-xl p-2 transition-colors hover:bg-gray-100">
@@ -49,7 +84,38 @@ export default function InviteMemberModal({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="border-b border-gray-200 p-6">
+          {/* Invite Link Section */}
+          <div className="border-b border-gray-200 p-4 sm:p-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-[#5a189a]" />
+              <h3 className="text-sm font-semibold text-gray-700">Share Invite Link</h3>
+            </div>
+            <p className="mb-3 text-xs text-gray-500">Anyone with this link can join the project</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 truncate rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-600">
+                {loadingLink ? "Loading..." : inviteLink || "No link available"}
+              </div>
+              <button
+                onClick={handleCopyLink}
+                disabled={!inviteLink || loadingLink}
+                className="flex shrink-0 items-center gap-2 rounded-xl bg-[#5a189a] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#3c096c] disabled:opacity-50"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span className="hidden sm:inline">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span className="hidden sm:inline">Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="border-b border-gray-200 p-4 sm:p-6">
             <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -62,7 +128,7 @@ export default function InviteMemberModal({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="colleague@example.com"
-                    className="w-full rounded-xl border border-gray-300 py-3 pl-12 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                    className="w-full rounded-xl border border-gray-300 py-3 pl-12 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                     required
                     autoFocus
                   />
@@ -76,11 +142,11 @@ export default function InviteMemberModal({
                     type="button"
                     onClick={() => setRole("member")}
                     className={`rounded-xl border-2 p-4 transition-all ${
-                      role === "member" ? "border-[#4F46E5] bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                      role === "member" ? "border-[#5a189a] bg-blue-50" : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${role === "member" ? "bg-[#4F46E5] text-white" : "bg-gray-100 text-gray-600"}`}>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${role === "member" ? "bg-[#5a189a] text-white" : "bg-gray-100 text-gray-600"}`}>
                         <User className="h-5 w-5" />
                       </div>
                       <div className="text-left">
@@ -94,11 +160,11 @@ export default function InviteMemberModal({
                     type="button"
                     onClick={() => setRole("admin")}
                     className={`rounded-xl border-2 p-4 transition-all ${
-                      role === "admin" ? "border-[#4F46E5] bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                      role === "admin" ? "border-[#5a189a] bg-blue-50" : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${role === "admin" ? "bg-[#4F46E5] text-white" : "bg-gray-100 text-gray-600"}`}>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${role === "admin" ? "bg-[#5a189a] text-white" : "bg-gray-100 text-gray-600"}`}>
                         <Crown className="h-5 w-5" />
                       </div>
                       <div className="text-left">
@@ -113,14 +179,14 @@ export default function InviteMemberModal({
 
             <button
               type="submit"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA]"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#5a189a] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#3c096c]"
             >
               <UserPlus className="h-5 w-5" />
               Send Invitation
             </button>
           </form>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-600">
               Current Members ({currentMembers.length})
             </h3>
@@ -152,7 +218,7 @@ export default function InviteMemberModal({
           </div>
         </div>
 
-        <div className="border-t border-gray-200 bg-gray-50 p-6">
+        <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-6">
           <button
             type="button"
             onClick={onClose}

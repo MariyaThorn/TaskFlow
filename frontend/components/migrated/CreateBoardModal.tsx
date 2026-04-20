@@ -82,7 +82,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Product Roadmap"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               required
               autoFocus
             />
@@ -94,7 +94,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this board about?"
-              className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+              className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               rows={2}
             />
           </div>
@@ -105,7 +105,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               <button
                 type="button"
                 onClick={() => setUseImage(!useImage)}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${useImage ? "bg-[#4F46E5] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${useImage ? "bg-[#5a189a] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
                 <Image className="h-3.5 w-3.5" />
                 Image URL
@@ -118,7 +118,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
                 value={backgroundImage}
                 onChange={(e) => setBackgroundImage(e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                className="mb-3 w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                className="mb-3 w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
               />
             )}
 
@@ -129,7 +129,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
                   type="button"
                   onClick={() => { setSelectedColor(color.gradient); setUseImage(false); }}
                   className={`h-10 w-full rounded-xl bg-gradient-to-br ${color.gradient} transition-all ${
-                    selectedColor === color.gradient && !useImage ? "ring-4 ring-[#4F46E5] ring-offset-2" : "hover:scale-105"
+                    selectedColor === color.gradient && !useImage ? "ring-4 ring-[#5a189a] ring-offset-2" : "hover:scale-105"
                   }`}
                 />
               ))}
@@ -137,7 +137,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="flex-1 rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA]">
+            <button type="submit" className="flex-1 rounded-xl bg-[#5a189a] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#3c096c]">
               Create Board
             </button>
             <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-gray-100 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-200">

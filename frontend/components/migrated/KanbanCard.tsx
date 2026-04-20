@@ -1,7 +1,9 @@
 "use client";
 
-import { Calendar, MessageSquare, Paperclip } from "lucide-react";
+import { useState } from "react";
+import { Calendar, MessageSquare, Paperclip, Trash2 } from "lucide-react";
 import type { Card } from "@/components/migrated/types";
+import UserAvatar from "@/components/migrated/UserAvatar";
 
 interface KanbanCardProps {
   card: Card;
@@ -9,6 +11,8 @@ interface KanbanCardProps {
   columnTitle: string;
   boardColor?: string;
   onClick: () => void;
+  onDelete?: (cardId: string) => void;
+  onUnassign?: (cardId: string) => void;
 }
 
 const statusConfig: Record<string, { label: string; bg: string; text: string }> = {
@@ -18,7 +22,8 @@ const statusConfig: Record<string, { label: string; bg: string; text: string }> 
   "Done": { label: "Done", bg: "bg-green-100", text: "text-green-700" },
 };
 
-export default function KanbanCard({ card, columnId, columnTitle, boardColor, onClick }: KanbanCardProps) {
+export default function KanbanCard({ card, columnId, columnTitle, boardColor, onClick, onDelete, onUnassign }: KanbanCardProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasDueDate = Boolean(card.dueDate);
   const dueDate = hasDueDate ? new Date(card.dueDate) : null;
@@ -61,8 +66,46 @@ export default function KanbanCard({ card, columnId, columnTitle, boardColor, on
   return (
     <div
       onClick={onClick}
-      className={`cursor-pointer rounded-xl border border-gray-200 border-l-4 ${borderAccent} bg-white p-4 shadow-sm transition-all hover:border-gray-300 hover:shadow-md`}
+      className={`group/card relative cursor-pointer rounded-xl border border-gray-200 border-l-4 ${borderAccent} bg-white p-4 shadow-sm transition-all hover:border-gray-300 hover:shadow-md`}
     >
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDeleteConfirm(true);
+          }}
+          className="absolute right-2 top-2 hidden rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 group-hover/card:flex"
+          title="Delete card"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {showDeleteConfirm && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/95 p-3"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-center">
+            <p className="mb-2 text-sm font-medium text-gray-900">Delete this card?</p>
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onDelete?.(card.id)}
+                className="rounded-lg bg-red-500 px-3 py-1 text-xs font-medium text-white hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status badge + labels row */}
       <div className="mb-2 flex items-center gap-2 flex-wrap">
         <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.bg} ${status.text}`}>
@@ -123,12 +166,22 @@ export default function KanbanCard({ card, columnId, columnTitle, boardColor, on
         </div>
 
         {card.assignee && (
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${card.assignee.color} text-xs font-semibold text-white shadow-sm`}
-            title={card.assignee.name}
+          <UserAvatar
+            name={card.assignee.name}
+            avatar={card.assignee.avatar}
+            color={card.assignee.color}
+            size="sm"
           >
-            {card.assignee.avatar}
-          </div>
+            {onUnassign && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onUnassign(card.id); }}
+                className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white shadow-sm hover:bg-red-600 group-hover/avatar:flex"
+                title="Unassign"
+              >
+                &times;
+              </button>
+            )}
+          </UserAvatar>
         )}
       </div>
     </div>

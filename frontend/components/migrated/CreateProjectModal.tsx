@@ -160,7 +160,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Product Development"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                 required
                 autoFocus
               />
@@ -174,7 +174,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
               <button
                 type="submit"
                 disabled={creating}
-                className="flex-1 rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA] disabled:opacity-60"
+                className="flex-1 rounded-xl bg-[#5a189a] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#3c096c] disabled:opacity-60"
               >
                 {creating ? "Creating..." : "Create Project"}
               </button>
@@ -190,7 +190,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
             {/* Invite by email/username */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">Invite by email or username</label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
@@ -199,13 +199,13 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
                     onChange={(e) => setInviteInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSendInvite(); } }}
                     placeholder="email@example.com or username"
-                    className="w-full rounded-xl border border-gray-300 py-2.5 pl-10 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                    className="w-full rounded-xl border border-gray-300 py-2.5 pl-10 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                   />
                 </div>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                  className="rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                  className="rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#5a189a]"
                 >
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
@@ -213,7 +213,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
                 <button
                   type="button"
                   onClick={handleSendInvite}
-                  className="rounded-xl bg-[#4F46E5] px-4 py-2.5 text-white transition-colors hover:bg-[#4338CA]"
+                  className="rounded-xl bg-[#5a189a] px-4 py-2.5 text-white transition-colors hover:bg-[#3c096c]"
                 >
                   <UserPlus className="h-5 w-5" />
                 </button>
@@ -272,7 +272,7 @@ export default function CreateProjectModal({ onClose, onCreate }: CreateProjectM
             <button
               type="button"
               onClick={handleDone}
-              className="w-full rounded-xl bg-[#4F46E5] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#4338CA]"
+              className="w-full rounded-xl bg-[#5a189a] py-3 font-medium text-white shadow-md transition-colors hover:bg-[#3c096c]"
             >
               Done
             </button>

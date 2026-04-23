@@ -8,8 +8,7 @@ import Navbar from "@/components/searchbar";
 import CreateProjectModal from "@/components/migrated/CreateProjectModal";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
-const BACKEND_URL = API_URL?.replace("/api", "") || "http://localhost:3000";
+import { getApiUrl, getBackendUrl } from "@/lib/utils";
 
 interface Project {
   id: string;
@@ -29,7 +28,7 @@ export default function DashboardPage() {
   const fetchProjects = useCallback(async () => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/projects`, {
+      const res = await fetch(`${getApiUrl()}/projects`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
@@ -44,7 +43,7 @@ export default function DashboardPage() {
           updatedAt: p.updatedAt,
           teamName: p.team?.name || undefined,
           color: p.color || "from-purple-500 to-purple-600",
-          backgroundImage: p.backgroundImage ? `${BACKEND_URL}${p.backgroundImage}` : undefined,
+          backgroundImage: p.backgroundImage ? `${getBackendUrl()}${p.backgroundImage}` : undefined,
         }))
       );
     } catch {

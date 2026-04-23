@@ -6,6 +6,7 @@ const Project = require('../models/Project');
 const Board = require('../models/Board');
 const User = require('../models/User');
 const protect = require('../middleware/auth');
+const { getIO } = require('../socket');
 
 // Configure multer for project background uploads
 const storage = multer.diskStorage({
@@ -260,6 +261,21 @@ router.post('/:id/invite', async (req, res) => {
 
     await project.save();
 
+    // Emit real-time notification to the invited user if they're online
+    if (targetUser) {
+      const savedInvitation = project.invitations[project.invitations.length - 1];
+      getIO()?.to(`user:${targetUser._id.toString()}`).emit('invitation:received', {
+        invitationId: savedInvitation._id.toString(),
+        projectId: project._id.toString(),
+        projectName: project.name,
+        role: inviteRole,
+        invitedBy: {
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+        },
+      });
+    }
+
     res.status(201).json({ message: 'Invitation sent' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -281,8 +297,8 @@ router.get('/:id/invite-link', async (req, res) => {
       return res.status(403).json({ message: 'Only admins can get invite link' });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-    const inviteUrl = `${frontendUrl}/invite/${project.inviteCode}`;
+    const frontendOrigin = (req.headers.origin || (process.env.FRONTEND_URL || 'http://localhost:3001').split(',')[0]).trim();
+    const inviteUrl = `${frontendOrigin}/invite/${project.inviteCode}`;
 
     res.json({ inviteUrl, inviteCode: project.inviteCode });
   } catch (err) {
@@ -309,8 +325,8 @@ router.post('/:id/regenerate-invite', async (req, res) => {
     project.inviteCode = crypto.randomBytes(16).toString('hex');
     await project.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-    const inviteUrl = `${frontendUrl}/invite/${project.inviteCode}`;
+    const frontendOrigin = (req.headers.origin || (process.env.FRONTEND_URL || 'http://localhost:3001').split(',')[0]).trim();
+    const inviteUrl = `${frontendOrigin}/invite/${project.inviteCode}`;
 
     res.json({ inviteUrl, inviteCode: project.inviteCode });
   } catch (err) {
@@ -400,6 +416,101 @@ router.post('/:id/invitations/:invId/decline', async (req, res) => {
     await project.save();
 
     res.json({ message: 'Invitation declined' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE /api/projects/:id/invitations/:invId — cancel a pending invitation (owner/admin only)
+router.delete('/:id/invitations/:invId', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const callerMember = project.members.find(
+      (m) => m.user.toString() === req.user._id.toString()
+    );
+    if (!callerMember || !['owner', 'admin'].includes(callerMember.role)) {
+      return res.status(403).json({ message: 'Only owner or admin can cancel invitations' });
+    }
+
+    const inv = project.invitations.id(req.params.invId);
+    if (!inv) return res.status(404).json({ message: 'Invitation not found' });
+
+    inv.status = 'declined';
+    await project.save();
+
+    res.json({ message: 'Invitation cancelled' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE /api/projects/:id/members/:userId — kick a member (owner/admin only)
+router.delete('/:id/members/:userId', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const callerMember = project.members.find(
+      (m) => m.user.toString() === req.user._id.toString()
+    );
+    if (!callerMember || !['owner', 'admin'].includes(callerMember.role)) {
+      return res.status(403).json({ message: 'Only owner or admin can remove members' });
+    }
+
+    const targetMember = project.members.find(
+      (m) => m.user.toString() === req.params.userId
+    );
+    if (!targetMember) {
+      return res.status(404).json({ message: 'Member not found' });
+    }
+
+    // Cannot kick the owner
+    if (targetMember.role === 'owner') {
+      return res.status(403).json({ message: 'Cannot remove the project owner' });
+    }
+
+    // Admins can only kick members, not other admins
+    if (callerMember.role === 'admin' && targetMember.role === 'admin') {
+      return res.status(403).json({ message: 'Admins cannot remove other admins' });
+    }
+
+    project.members = project.members.filter(
+      (m) => m.user.toString() !== req.params.userId
+    );
+    await project.save();
+
+    res.json({ message: 'Member removed' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/projects/:id/leave — leave a project
+router.post('/:id/leave', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const member = project.members.find(
+      (m) => m.user.toString() === req.user._id.toString()
+    );
+    if (!member) {
+      return res.status(404).json({ message: 'You are not a member of this project' });
+    }
+
+    // Owner cannot leave — must transfer ownership or delete
+    if (member.role === 'owner') {
+      return res.status(403).json({ message: 'Project owner cannot leave. Transfer ownership or delete the project instead.' });
+    }
+
+    project.members = project.members.filter(
+      (m) => m.user.toString() !== req.user._id.toString()
+    );
+    await project.save();
+
+    res.json({ message: 'Left project' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

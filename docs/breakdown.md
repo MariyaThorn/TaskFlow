@@ -127,12 +127,15 @@ The backend is built with **Express.js** and follows RESTful conventions. Routes
 | GET | `/:id` | Get single project (membership verified) |
 | PATCH | `/:id/appearance` | Update project color / background image |
 | POST | `/:id/background` | Upload custom background image via multer |
-| POST | `/:id/invite` | Invite user by email or username (owner/admin only) |
-| GET | `/:id/invite-link` | Get shareable invite URL (owner/admin only) |
-| POST | `/:id/regenerate-invite` | Regenerate invite code (owner/admin only) |
-| POST | `/join/:code` | Join project via invite link code |
+| POST | `/:id/invite` | Invite user by email or username (owner/admin only, 409 if duplicate) |
+| GET | `/:id/invite-link` | Get shareable invite URL (uses `req.headers.origin` for correct host) |
+| POST | `/:id/regenerate-invite` | Regenerate invite code + new URL (owner/admin only) |
+| POST | `/join/:code` | Join project via invite link (returns project ID if already a member) |
 | POST | `/:id/invitations/:invId/accept` | Accept a pending invitation |
 | POST | `/:id/invitations/:invId/decline` | Decline a pending invitation |
+| DELETE | `/:id/invitations/:invId` | Cancel a pending invitation (owner/admin only) |
+| DELETE | `/:id/members/:userId` | Kick a member (owner can kick anyone except owner; admin can kick members) |
+| POST | `/:id/leave` | Leave project (owner cannot leave) |
 | DELETE | `/:id` | Delete project + all boards (owner only) |
 
 #### Boards (`/api/boards`) — all authenticated
@@ -157,6 +160,7 @@ The backend is built with **Express.js** and follows RESTful conventions. Routes
 #### Users (`/api/users`) — all authenticated
 | Method | Endpoint | Description |
 |---|---|---|
+| GET | `/search?q=` | Search users by name, email, or username (min 2 chars, max 10 results, excludes self) |
 | PUT | `/profile` | Update name, username, email, occupation |
 | PUT | `/password` | Change password (requires current password) |
 | GET | `/settings` | Get user settings |
@@ -415,6 +419,13 @@ BoardPage (page.tsx)
 | Responsive sidebar | Collapsible on desktop (saved to localStorage), slide-out drawer on mobile |
 | Card progress bars | Visual progress indicator (0–100%) on each card |
 | Tooltips | Hover on avatar → shows name below with arrow, colored with user's gradient |
+| Multi-select invite | Search users with autocomplete, select multiple as chips, send batch invitations |
+| Inline modal toasts | Success/error feedback inside modals (not behind them) |
+| Member management | Kick members, cancel pending invitations, leave project — all from the invite modal |
+| Invite link clipboard | Clipboard API with textarea fallback for insecure contexts (LAN) |
+| Already-in-project badges | Search dropdown shows disabled users already in the project |
+| Invite link redirect | Existing members clicking an invite link auto-redirect to the project page |
+| Real-time notifications | Socket.IO pushes invitation toasts to the invited user's browser in real-time |
 
 ---
 
@@ -432,11 +443,16 @@ The socket server attaches to the HTTP server with CORS configured to match the 
 
 ### Room Architecture
 
-Every board has a room named `board:{boardId}`. When a user opens a board page:
+**Board rooms** — `board:{boardId}`: When a user opens a board page:
 1. Client emits `join-board` with `(boardId, userId)`
 2. Server calls `socket.join("board:<boardId>")` and stores `boardId` + `userId` on `socket.data`
 3. Server broadcasts updated presence to the room
 4. On page unmount, client emits `leave-board` → server leaves the room and broadcasts again
+
+**User rooms** — `user:{userId}`: When a user logs in:
+1. Client emits `register-user` with `(userId)`
+2. Server calls `socket.join("user:<userId>")`
+3. Used for cross-app notifications (e.g., invitation received) that aren't tied to a specific board
 
 ### Socket Events — Complete Reference
 
@@ -445,6 +461,7 @@ Every board has a room named `board:{boardId}`. When a user opens a board page:
 |---|---|---|
 | `join-board` | `(boardId, userId)` | Join board room, announce presence |
 | `leave-board` | `(boardId)` | Leave board room |
+| `register-user` | `(userId)` | Join user room for notifications |
 | `request-presence` | `(boardId)` | Request current active users list |
 | `cursor-move` | `{ boardId, userId, userName, userAvatar, userColor, x, y }` | Send cursor position |
 
@@ -460,6 +477,7 @@ Every board has a room named `board:{boardId}`. When a user opens a board page:
 | `board:column-added` | `{ boardId, column }` | REST: POST column |
 | `board:column-renamed` | `{ boardId, columnId, title }` | REST: PUT column |
 | `board:column-deleted` | `{ boardId, columnId }` | REST: DELETE column |
+| `invitation:received` | `{ projectId, projectName, invitedBy, role }` | REST: POST invite (sent to invited user's room) |
 
 ### Presence Tracking (`backend/socket.js`)
 
@@ -507,6 +525,15 @@ async function broadcastPresence(boardId) {
 | `useBoardPresence(boardId)` | `string[]` | Active user IDs in the board, auto-updates on presence changes |
 | `useBoardCursors(boardId)` | `{ cursors, emitCursor }` | Live cursor positions + emit function |
 
+### User Rooms & Real-Time Notifications
+
+Beyond board rooms, TaskFlow also uses **per-user rooms** (`user:<userId>`) for notifications that aren't board-specific:
+
+- When a user is invited to a project, the backend emits `invitation:received` to `user:<invitedUserId>`
+- The `NotificationProvider` component (wraps the entire app) connects to the user's room on mount
+- Incoming invitation events render as **bottom-right toast notifications** with Accept / Decline buttons
+- Accepting redirects the user to the project; declining dismisses the toast
+
 **Singleton pattern:** A single socket connection is shared across all hooks via `getSocket()` — no duplicate connections.
 
 ### REST + WebSocket Integration
@@ -532,4 +559,4 @@ This ensures **data consistency** (REST handles persistence with proper validati
 | REST API + Async | `backend/routes/auth.js`, `projects.js`, `boards.js`, `users.js`, `teams.js`, `admin.js` |
 | Auth + Security | `backend/middleware/auth.js`, `routes/auth.js`, `backend/app.js` (session config) |
 | UI + Client-Server | `frontend/lib/auth.ts`, `useBoard.ts`, `page.tsx`, all component files |
-| Real-time / WebSocket | `backend/socket.js`, `frontend/lib/socket.ts`, `LiveCursors.tsx` |
+| Real-time / WebSocket | `backend/socket.js`, `frontend/lib/socket.ts`, `LiveCursors.tsx`, `NotificationProvider.tsx` |

@@ -8,6 +8,31 @@ const router = express.Router();
 
 router.use(protect);
 
+// GET /api/users/search?q= — search users by name, email, or username
+router.get('/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 2) {
+      return res.json({ users: [] });
+    }
+    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const users = await User.find({
+      _id: { $ne: req.user._id },
+      $or: [
+        { firstName: regex },
+        { lastName: regex },
+        { email: regex },
+        { username: regex },
+      ],
+    })
+      .select('firstName lastName email username avatarColor profileImage')
+      .limit(10);
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // PUT /api/users/profile — update profile info
 router.put('/profile', async (req, res) => {
   try {

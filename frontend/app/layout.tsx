@@ -3,6 +3,7 @@ import { Poppins, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import NavbarWrapper from "@/components/navbar-wrapper";
+import NotificationProvider from "@/components/NotificationProvider";
 
 const poppins = Poppins({
   variable: "--font-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
         <Suspense>
           <NavbarWrapper />
         </Suspense>
+        <NotificationProvider />
         {children}
       </body>
     </html>

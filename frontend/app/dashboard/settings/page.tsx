@@ -7,7 +7,7 @@ import Sidebar from "@/components/sidebar";
 import Navbar from "@/components/searchbar";
 import { getUser, getToken, fetchMe, saveAuth, clearAuth } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { getApiUrl } from "@/lib/utils";
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
@@ -80,7 +80,7 @@ export default function SettingsPage() {
     // Fetch settings
     const token = getToken();
     if (token) {
-      fetch(`${API_URL}/users/settings`, {
+      fetch(`${getApiUrl()}/users/settings`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -105,7 +105,7 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/users/profile`, {
+      const res = await fetch(`${getApiUrl()}/users/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         credentials: "include",
@@ -138,7 +138,7 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/users/password`, {
+      const res = await fetch(`${getApiUrl()}/users/password`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         credentials: "include",
@@ -163,7 +163,7 @@ export default function SettingsPage() {
   const saveSettings = async (updates: Record<string, unknown>) => {
     try {
       const token = getToken();
-      await fetch(`${API_URL}/users/settings`, {
+      await fetch(`${getApiUrl()}/users/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         credentials: "include",
@@ -177,7 +177,7 @@ export default function SettingsPage() {
   const handleDeleteAccount = async () => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/users/account`, {
+      const res = await fetch(`${getApiUrl()}/users/account`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",

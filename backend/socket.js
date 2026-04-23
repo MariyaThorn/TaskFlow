@@ -2,15 +2,27 @@ const { Server } = require('socket.io');
 
 let io = null;
 
+var socketAllowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3001")
+  .split(",")
+  .map(function (s) { return s.trim(); });
+
 function initSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || "http://26.72.254.233:3001",
+      origin: socketAllowedOrigins,
       credentials: true,
     },
   });
 
   io.on('connection', (socket) => {
+    // Join a personal user room for notifications
+    socket.on('register-user', (userId) => {
+      if (userId) {
+        socket.join(`user:${userId}`);
+        socket.data.registeredUserId = userId;
+      }
+    });
+
     // Join a board room when client requests it
     socket.on('join-board', async (boardId, userId) => {
       socket.join(`board:${boardId}`);

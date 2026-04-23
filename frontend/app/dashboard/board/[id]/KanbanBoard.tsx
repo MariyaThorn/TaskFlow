@@ -10,7 +10,7 @@ interface KanbanBoardProps {
   boardColor: string;
   backgroundImage?: string;
   projectMembers: TeamMember[];
-  onMoveCard: (cardId: string, sourceColumnId: string, targetColumnId: string) => void;
+  onMoveCard: (cardId: string, sourceColumnId: string, targetColumnId: string, sourceIndex: number, targetIndex: number) => void;
   onCardClick: (card: Card, columnId: string) => void;
   onAddCard: (columnId: string, data: { title: string; description?: string; dueDate?: string; labels?: KanbanLabel[]; assignee?: TeamMember }) => void;
   onDeleteCard: (cardId: string) => void;

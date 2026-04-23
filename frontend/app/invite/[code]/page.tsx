@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getToken, isAuthenticated } from "@/lib/auth";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+import { getApiUrl } from "@/lib/utils";
 
 export default function InvitePage() {
   const params = useParams();
@@ -23,7 +22,7 @@ export default function InvitePage() {
     const join = async () => {
       try {
         const token = getToken();
-        const res = await fetch(`${API_URL}/projects/join/${code}`, {
+        const res = await fetch(`${getApiUrl()}/projects/join/${code}`, {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           credentials: "include",
@@ -32,6 +31,11 @@ export default function InvitePage() {
         if (!res.ok) {
           setStatus("error");
           setMessage(data.message || "Invalid invite link");
+          return;
+        }
+        // If already a member, redirect straight to the project
+        if (data.message === "Already a member" && data.project?.id) {
+          router.replace(`/dashboard/project/${data.project.id}`);
           return;
         }
         setStatus("success");

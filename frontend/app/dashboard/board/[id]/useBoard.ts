@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Card, Column, TeamMember, KanbanLabel } from "@/components/migrated/types";
 import { getToken } from "@/lib/auth";
 import { useBoardSocket } from "@/lib/socket";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
-const BACKEND_URL = API_URL?.replace("/api", "") || "http://localhost:3000";
+import { getApiUrl, getBackendUrl } from "@/lib/utils";
 
 const fallbackColors = [
   "from-blue-500 to-blue-600",
@@ -38,7 +36,7 @@ export function useBoard(boardId: string) {
 
   const fetchBoard = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/boards/${boardId}`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}`, {
         headers: headers(),
         credentials: "include",
       });
@@ -48,7 +46,7 @@ export function useBoard(boardId: string) {
       setBoardName(b.name);
       setBoardColor(b.color || "from-blue-500 to-blue-600");
       const bgImg = b.backgroundImage || "";
-      setBoardBackgroundImage(bgImg.startsWith("/uploads/") ? `${BACKEND_URL}${bgImg}` : bgImg);
+      setBoardBackgroundImage(bgImg.startsWith("/uploads/") ? `${getBackendUrl()}${bgImg}` : bgImg);
       setProjectId(typeof b.project === "string" ? b.project : b.project?._id || "");
       if (data.project?.name) setProjectName(data.project.name);
 
@@ -102,6 +100,19 @@ export function useBoard(boardId: string) {
     fetchBoard();
   }, [fetchBoard]);
 
+  const handleBackgroundChanged = useCallback((data: { backgroundImage: string }) => {
+    if (pendingOp.current) {
+      pendingOp.current = false;
+      return;
+    }
+    const bg = data.backgroundImage;
+    if (bg && bg.startsWith("/uploads/")) {
+      setBoardBackgroundImage(`${getBackendUrl()}${bg}`);
+    } else {
+      setBoardBackgroundImage(bg || "");
+    }
+  }, []);
+
   useBoardSocket(boardId, {
     onCardAdded: refetchIfNotLocal,
     onCardUpdated: refetchIfNotLocal,
@@ -110,9 +121,10 @@ export function useBoard(boardId: string) {
     onColumnAdded: refetchIfNotLocal,
     onColumnRenamed: refetchIfNotLocal,
     onColumnDeleted: refetchIfNotLocal,
+    onBackgroundChanged: handleBackgroundChanged,
   });
 
-  const moveCard = async (cardId: string, sourceColumnId: string, targetColumnId: string) => {
+  const moveCard = async (cardId: string, sourceColumnId: string, targetColumnId: string, sourceIndex: number, targetIndex: number) => {
     setColumns((prevColumns) => {
       const newColumns = prevColumns.map((col) => ({ ...col, cards: [...col.cards] }));
       const sourceColumn = newColumns.find((col) => col.id === sourceColumnId);
@@ -121,17 +133,17 @@ export function useBoard(boardId: string) {
       const cardIndex = sourceColumn.cards.findIndex((card) => card.id === cardId);
       if (cardIndex === -1) return prevColumns;
       const [card] = sourceColumn.cards.splice(cardIndex, 1);
-      targetColumn.cards.push(card);
+      targetColumn.cards.splice(targetIndex, 0, card);
       return newColumns;
     });
 
     try {
       pendingOp.current = true;
-      const res = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}/move`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}/cards/${cardId}/move`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
-        body: JSON.stringify({ targetColumnId }),
+        body: JSON.stringify({ targetColumnId, targetIndex }),
       });
       if (!res.ok) fetchBoard();
     } catch {
@@ -157,7 +169,7 @@ export function useBoard(boardId: string) {
 
     try {
       pendingOp.current = true;
-      await fetch(`${API_URL}/boards/${boardId}/cards/${updatedCard.id}`, {
+      await fetch(`${getApiUrl()}/boards/${boardId}/cards/${updatedCard.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -188,7 +200,7 @@ export function useBoard(boardId: string) {
       if (data.assignee) {
         body.assignee = { name: data.assignee.name, avatar: data.assignee.avatar, color: data.assignee.color };
       }
-      const res = await fetch(`${API_URL}/boards/${boardId}/cards`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}/cards`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -213,7 +225,7 @@ export function useBoard(boardId: string) {
 
     try {
       pendingOp.current = true;
-      await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}`, {
+      await fetch(`${getApiUrl()}/boards/${boardId}/cards/${cardId}`, {
         method: "DELETE",
         headers: headers(),
         credentials: "include",
@@ -226,7 +238,7 @@ export function useBoard(boardId: string) {
   const handleAddColumn = async (title: string) => {
     try {
       pendingOp.current = true;
-      const res = await fetch(`${API_URL}/boards/${boardId}/columns`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}/columns`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -245,7 +257,7 @@ export function useBoard(boardId: string) {
     setColumns((prev) => prev.map((col) => (col.id === columnId ? { ...col, title } : col)));
     try {
       pendingOp.current = true;
-      await fetch(`${API_URL}/boards/${boardId}/columns/${columnId}`, {
+      await fetch(`${getApiUrl()}/boards/${boardId}/columns/${columnId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...headers() },
         credentials: "include",
@@ -260,7 +272,7 @@ export function useBoard(boardId: string) {
     setColumns((prev) => prev.filter((col) => col.id !== columnId));
     try {
       pendingOp.current = true;
-      await fetch(`${API_URL}/boards/${boardId}/columns/${columnId}`, {
+      await fetch(`${getApiUrl()}/boards/${boardId}/columns/${columnId}`, {
         method: "DELETE",
         headers: headers(),
         credentials: "include",

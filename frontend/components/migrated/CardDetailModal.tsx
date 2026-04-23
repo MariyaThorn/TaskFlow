@@ -5,7 +5,7 @@ import { X, AlignLeft, Tag, Paperclip, MessageSquare, Trash2, FileText, Download
 import type { Card, KanbanLabel, KanbanAttachment, TeamMember } from "@/components/migrated/types";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+import { getApiUrl, getBackendUrl } from "@/lib/utils";
 
 const LABEL_COLORS = [
   { name: "Red", value: "bg-red-500" },
@@ -111,7 +111,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, members = 
       formData.append("file", file);
 
       const token = getToken();
-      const res = await fetch(`${API_URL}/boards/${boardId}/cards/${card.id}/attachments`, {
+      const res = await fetch(`${getApiUrl()}/boards/${boardId}/cards/${card.id}/attachments`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
@@ -143,7 +143,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, members = 
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
       const token = getToken();
-      await fetch(`${API_URL}/boards/${boardId}/cards/${card.id}/attachments/${attachmentId}`, {
+      await fetch(`${getApiUrl()}/boards/${boardId}/cards/${card.id}/attachments/${attachmentId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
@@ -300,7 +300,7 @@ export default function CardDetailModal({ card, boardId, columnTitle, members = 
                           <p className="text-xs text-[#5a189a]/50">{formatFileSize(att.size)}</p>
                         </div>
                         <a
-                          href={`${API_URL?.replace('/api', '') ?? ''}${att.url}`}
+                          href={`${getBackendUrl()}${att.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="rounded-lg p-1.5 text-[#5a189a]/40 hover:bg-[#ede0ff] hover:text-[#5a189a]"

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Users, ArrowRight, Plus } from "lucide-react";
+import { Users, ArrowRight, Plus, CheckCircle, AlertCircle, X } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import Navbar from "@/components/searchbar";
 import CreateTeamModal from "@/components/migrated/CreateTeamModal";
 import { getToken } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { getApiUrl } from "@/lib/utils";
 
 interface Team {
   id: string;
@@ -22,11 +22,17 @@ interface Team {
 export default function TeamsListPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const showMsg = (type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 4000);
+  };
 
   const fetchTeams = useCallback(async () => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/teams`, {
+      const res = await fetch(`${getApiUrl()}/teams`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
@@ -60,7 +66,7 @@ export default function TeamsListPage() {
   const handleCreateTeam = async (newTeam: { name: string; description: string; image: string }) => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/teams`, {
+      const res = await fetch(`${getApiUrl()}/teams`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -71,12 +77,13 @@ export default function TeamsListPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        window.alert(data.message || "Failed to create team");
+        showMsg("error", data.message || "Failed to create team");
         return;
       }
+      showMsg("success", "Team created!");
       fetchTeams();
     } catch {
-      window.alert("Failed to create team");
+      showMsg("error", "Failed to create team");
     }
   };
 
@@ -110,6 +117,13 @@ export default function TeamsListPage() {
           }
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {message && (
+            <div className={`mb-6 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-sm ${message.type === "success" ? "bg-green-50 text-green-700 ring-1 ring-green-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
+              {message.type === "success" ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+              {message.text}
+              <button onClick={() => setMessage(null)} className="ml-auto rounded-lg p-0.5 hover:bg-black/5"><X className="h-3.5 w-3.5" /></button>
+            </div>
+          )}
           {filteredTeams.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl bg-white py-16 shadow-md">
               <Users className="mb-4 h-12 w-12 text-gray-300" />

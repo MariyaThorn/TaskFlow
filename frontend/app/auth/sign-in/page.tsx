@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ListTodo } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/auth";
+import { getApiUrl } from "@/lib/utils";
 
 interface FormData {
   email: string;
@@ -25,6 +26,7 @@ export default function SignIn() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [rememberMe, setRememberMe] = useState<boolean>(false);
 
+
   const validate = (): FormErrors => {
     const newErrors: FormErrors = {};
 
@@ -34,11 +36,9 @@ export default function SignIn() {
       newErrors.email = "Please enter a valid email address.";
     }
 
-    if (!formData.password) {
-      newErrors.password = "Password is required.";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters.";
-    }
+  if (!formData.password) {
+    newErrors.password = "Password is required.";
+  }
 
     return newErrors;
   };
@@ -53,6 +53,70 @@ export default function SignIn() {
   };
 
   const [loading, setLoading] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleInitializedRef = useRef(false);
+
+  const handleGoogleCallback = useCallback(async (response: any) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${getApiUrl()}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ token: response.credential }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrors({ general: data.message || "Google sign-in failed" });
+        return;
+      }
+
+      // Save auth data
+      localStorage.setItem("taskflow_token", data.token);
+      localStorage.setItem("taskflow_user", JSON.stringify(data.user));
+
+      router.push("/dashboard/dashboard-1");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Google sign-in failed.";
+      setErrors({ general: message });
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    // Prevent multiple initializations
+    if (googleInitializedRef.current) return;
+
+    const initializeGoogleButton = () => {
+      if ((window as any).google && googleButtonRef.current) {
+        (window as any).google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          callback: handleGoogleCallback,
+        });
+
+        (window as any).google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: "outline",
+          size: "large",
+        });
+        googleInitializedRef.current = true;
+      }
+    };
+
+    // Load Google script if not already loaded
+    if (!(window as any).google) {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGoogleButton;
+      document.head.appendChild(script);
+    } else {
+      initializeGoogleButton();
+    }
+  }, [handleGoogleCallback]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,7 +133,12 @@ export default function SignIn() {
       router.push("/dashboard/dashboard-1");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Invalid email or password.";
-      setErrors({ general: message });
+      
+      if (message.toLowerCase().includes("google")) {
+        setErrors({ general: "This account uses Google Sign-In. Please use the Google button below." });
+      } else {
+        setErrors({ general: message });
+      }
     } finally {
       setLoading(false);
     }
@@ -202,20 +271,7 @@ export default function SignIn() {
               <div className="h-px flex-1 bg-white/30" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                Facebook
-              </button>
-              <button
-                type="button"
-                className="rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-              >
-                Twitter
-              </button>
-            </div>
+            <div ref={googleButtonRef}></div>
 
             <p className="pt-1 text-center text-sm text-white/80">
               Don&apos;t have an account?{" "}

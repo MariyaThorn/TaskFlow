@@ -112,3 +112,78 @@ export async function fetchMe(): Promise<AuthUser> {
 
   return data.user;
 }
+
+export async function googleOAuth(): Promise<AuthResponse> {
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  
+  if (!clientId) {
+    throw new Error("Google Client ID is not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.");
+  }
+
+  // Load the Google Sign-In library
+  const loadGoogleSignIn = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if ((window as any).google) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        throw new Error("Failed to load Google Sign-In library");
+      };
+      document.head.appendChild(script);
+    });
+  };
+
+  await loadGoogleSignIn();
+
+  return new Promise((resolve, reject) => {
+    const google = (window as any).google;
+    if (!google) {
+      reject(new Error("Google Sign-In library failed to load"));
+      return;
+    }
+
+    let tokenReceived = false;
+
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async (response: any) => {
+        if (tokenReceived) return;
+        tokenReceived = true;
+
+        try {
+          const res = await fetch(`${getApiUrl()}/auth/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ token: response.credential }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            reject(new Error(data.message || "Google authentication failed"));
+            return;
+          }
+
+          saveAuth(data);
+          resolve(data);
+        } catch (error) {
+          reject(error);
+        }
+      },
+    });
+
+    // Try to show the One Tap UI first
+    google.accounts.id.prompt((notification: any) => {
+      // If One Tap UI is not displayed, the user might be signed in already
+      // or they dismissed it, so we'll just wait for the callback
+    });
+  });
+}
